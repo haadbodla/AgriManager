@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.agrimanager.data.local.EmployeeEntity
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmployeeListScreen(
@@ -51,9 +53,11 @@ fun EmployeeListScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(employees) { employee ->
-                    EmployeeCard(employee) {
-                        navController.navigate("salary/${employee.id}")
-                    }
+                    EmployeeCard(
+                        employee = employee,
+                        onClick = { navController.navigate("salary/${employee.id}") },
+                        onDelete = { viewModel.deleteEmployee(employee) }
+                    )
                 }
             }
         }
@@ -71,25 +75,41 @@ fun EmployeeListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmployeeCard(employee: EmployeeEntity, onClick: () -> Unit) {
+private fun EmployeeCard(
+    employee: EmployeeEntity,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         onClick = onClick,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = employee.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Base Salary: ₹${employee.baseSalary}",
-                style = MaterialTheme.typography.bodySmall
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = employee.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Base Salary: ₹${employee.baseSalary}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            // Delete button placed inside the Row
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Employee",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }

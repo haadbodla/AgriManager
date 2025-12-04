@@ -145,7 +145,9 @@ class FarmRepository @Inject constructor(
     suspend fun insertEmployee(employee: EmployeeEntity) {
         dao.insertEmployee(employee)
     }
-
+    suspend fun deleteEmployee(employee: EmployeeEntity) {
+        dao.deleteEmployee(employee)
+    }
     fun getAllEmployees(): Flow<List<EmployeeEntity>> = dao.getAllEmployees()
 
     suspend fun getEmployeeById(id: Int): EmployeeEntity? = dao.getEmployeeById(id)
