@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "544326462830",
+    "project_id": "expensetrackerapp-2b752",
+    "storage_bucket": "expensetrackerapp-2b752.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:544326462830:android:e3d7fae542858a4db6657f",
+        "android_client_info": {
+          "package_name": "com.example.agrimanager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEkDDYg1NsytXXbjQZ1U4g1arp0ktleSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:544326462830:android:58040e493560d431b6657f",
+        "android_client_info": {
+          "package_name": "com.example.application3"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEkDDYg1NsytXXbjQZ1U4g1arp0ktleSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
