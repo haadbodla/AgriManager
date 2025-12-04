@@ -5,14 +5,17 @@ import androidx.room.RoomDatabase
 import com.example.agrimanager.data.local.FuelLogEntity
 import com.example.agrimanager.data.local.MachineEntity
 
-@Database(entities =
-    [
+@Database(
+    entities = [
         MachineEntity::class,
         FuelLogEntity::class,
         LocationEntity::class,
-        BillEntity::class
+        BillEntity::class,
+        EmployeeEntity::class,
+        TransactionEntity::class
     ],
-    version = 2, exportSchema = false)
+    version = 3, exportSchema = false
+)
 abstract class FarmDatabase : RoomDatabase() {
     abstract fun farmDao(): FarmDao
 }

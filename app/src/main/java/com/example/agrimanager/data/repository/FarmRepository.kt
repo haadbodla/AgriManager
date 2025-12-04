@@ -3,6 +3,7 @@ package com.example.agrimanager.data.repository
 import android.content.Context
 import androidx.work.* // Imports WorkManager, Constraints, NetworkType, etc.
 import com.example.agrimanager.data.local.*
+import com.example.agrimanager.ui.*
 import com.example.agrimanager.workers.FirestoreSyncWorker
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -140,4 +141,22 @@ class FarmRepository @Inject constructor(
         )
         scheduleSync("bills", id.toString(), data)
     }
+    // ================== EMPLOYEE OPERATIONS ==================
+    suspend fun insertEmployee(employee: EmployeeEntity) {
+        dao.insertEmployee(employee)
+    }
+
+    fun getAllEmployees(): Flow<List<EmployeeEntity>> = dao.getAllEmployees()
+
+    suspend fun getEmployeeById(id: Int): EmployeeEntity? = dao.getEmployeeById(id)
+
+    // ================== TRANSACTION OPERATIONS ==================
+    suspend fun insertTransaction(transaction: TransactionEntity) {
+        dao.insertTransaction(transaction)
+    }
+
+    fun getTransactionsForEmployee(employeeId: Int): Flow<List<TransactionEntity>> = dao.getTransactionsForEmployee(employeeId)
+
+    fun getTotalAdvances(employeeId: Int): Flow<Double?> = dao.getTotalAdvances(employeeId)
+
 }

@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavController
 import androidx.navigation.navArgument
 import com.example.agrimanager.data.repository.AuthRepository
 import com.example.agrimanager.ui.auth.LoginScreen
@@ -15,6 +16,8 @@ import com.example.agrimanager.ui.dashboard.DashboardScreen
 import com.example.agrimanager.ui.fuel.FuelLogScreen
 import com.example.agrimanager.ui.location.LocationListScreen
 import com.example.agrimanager.ui.machine.MachineListScreen
+import com.example.agrimanager.ui.employee.EmployeeListScreen
+import com.example.agrimanager.ui.employee.SalaryScreen
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -28,7 +31,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
-
         setContent {
             val navController = rememberNavController()
 
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
                     DashboardScreen(
                         onFuelClick = { navController.navigate("machine_list") },
                         onBillClick = { navController.navigate("bill_list") },
+                        onSalaryClick = { navController.navigate("employee_list") },
                         onLogoutClick = {
                             authRepository.signOut()
                             navController.navigate("login") {
@@ -63,8 +66,21 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                // ... (The rest of your routes remain exactly the same) ...
+                // Employee List
+                composable("employee_list") {
+                    EmployeeListScreen(navController = navController)
+                }
 
+                // Salary Screen
+                composable(
+                    "salary/{employeeId}",
+                    arguments = listOf(navArgument("employeeId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val id = backStackEntry.arguments?.getInt("employeeId") ?: -1
+                    SalaryScreen(employeeId = id, navController = navController)
+                }
+
+                // Existing routes
                 composable("machine_list") {
                     MachineListScreen(onMachineClick = { id -> navController.navigate("fuel_logs/$id") })
                 }
@@ -84,6 +100,5 @@ class MainActivity : ComponentActivity() {
                     LocationListScreen(onBackClick = { navController.popBackStack() })
                 }
             }
-        }
-    }
+        }    }
 }

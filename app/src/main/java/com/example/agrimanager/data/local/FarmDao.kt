@@ -9,8 +9,28 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FarmDao {
+
+    // --- Employee Operations ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEmployee(employee: EmployeeEntity): Long
+
+    @Query("SELECT * FROM employees ORDER BY name ASC")
+    fun getAllEmployees(): Flow<List<EmployeeEntity>>
+
+    @Query("SELECT * FROM employees WHERE id = :id")
+    suspend fun getEmployeeById(id: Int): EmployeeEntity?
+
+    // --- Transaction Operations ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTransaction(transaction: TransactionEntity): Long
+
+    @Query("SELECT * FROM transactions WHERE employee_id = :employeeId")
+    fun getTransactionsForEmployee(employeeId: Int): Flow<List<TransactionEntity>>
+
+    @Query("SELECT SUM(amount) FROM transactions WHERE employee_id = :employeeId AND type = 'DEBIT'")
+    fun getTotalAdvances(employeeId: Int): Flow<Double?>
+
     // --- Machines ---
-    // MUST RETURN LONG (The new Row ID)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMachine(machine: MachineEntity): Long
 
@@ -25,7 +45,7 @@ interface FarmDao {
 
     // --- Fuel Logs ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertFuelLog(log: FuelLogEntity): Long // <--- Change to Long
+    suspend fun insertFuelLog(log: FuelLogEntity): Long
 
     @Query("SELECT * FROM fuel_logs WHERE machine_id = :machineId ORDER BY date DESC")
     fun getFuelLogsForMachine(machineId: Int): Flow<List<FuelLogEntity>>
@@ -35,7 +55,7 @@ interface FarmDao {
 
     // --- Locations ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertLocation(location: LocationEntity): Long // <--- Change to Long
+    suspend fun insertLocation(location: LocationEntity): Long
 
     @Delete
     suspend fun deleteLocation(location: LocationEntity)
@@ -45,7 +65,7 @@ interface FarmDao {
 
     // --- Bills ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBill(bill: BillEntity): Long // <--- Change to Long
+    suspend fun insertBill(bill: BillEntity): Long
 
     @Query("""
         SELECT bills.*, locations.name as location_name 
