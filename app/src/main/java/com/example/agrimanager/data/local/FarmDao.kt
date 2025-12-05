@@ -83,4 +83,27 @@ interface FarmDao {
 
     @Query("SELECT SUM(amount) FROM bills WHERE location_id = :locationId")
     fun getTotalBillForLocation(locationId: Int): Flow<Double?>
+
+    // --- Inventory Items ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertInventoryItem(item: InventoryItemEntity): Long
+
+    @Query("SELECT * FROM inventory_items ORDER BY name ASC")
+    fun getAllInventoryItems(): Flow<List<InventoryItemEntity>>
+
+    @Query("SELECT * FROM inventory_items WHERE item_id = :id")
+    suspend fun getInventoryItemById(id: Int): InventoryItemEntity?
+
+    @Query("UPDATE inventory_items SET current_quantity = :quantity WHERE item_id = :id")
+    suspend fun updateInventoryQuantity(id: Int, quantity: Double)
+
+    @Delete
+    suspend fun deleteInventoryItem(item: InventoryItemEntity)
+
+    // --- Stock Transactions ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStockTransaction(transaction: StockTransactionEntity): Long
+
+    @Query("SELECT * FROM stock_transactions WHERE item_id = :itemId ORDER BY date DESC")
+    fun getTransactionsForItem(itemId: Int): Flow<List<StockTransactionEntity>>
 }

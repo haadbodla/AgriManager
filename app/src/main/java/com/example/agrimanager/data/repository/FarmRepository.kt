@@ -161,4 +161,53 @@ class FarmRepository @Inject constructor(
 
     fun getTotalAdvances(employeeId: Int): Flow<Double?> = dao.getTotalAdvances(employeeId)
 
+
+    // ================== INVENTORY OPERATIONS ==================
+    
+    fun getAllInventoryItems(): Flow<List<InventoryItemEntity>> = dao.getAllInventoryItems()
+    
+    suspend fun addInventoryItem(item: InventoryItemEntity) {
+        dao.insertInventoryItem(item)
+    }
+    
+    suspend fun recordPurchase(itemId: Int, quantity: Double, totalCost: Double) {
+        // Get current item
+        val item = dao.getInventoryItemById(itemId) ?: return
+        
+        // Update quantity
+        val newQuantity = item.currentQuantity + quantity
+        dao.updateInventoryQuantity(itemId, newQuantity)
+        
+        // Record transaction
+        val transaction = StockTransactionEntity(
+            itemId = itemId,
+            type = "IN",
+            quantity = quantity,
+            totalCost = totalCost
+        )
+        dao.insertStockTransaction(transaction)
+    }
+    
+    suspend fun recordStockOut(itemId: Int, quantity: Double, locationId: Int, employeeId: Int) {
+        // Get current item
+        val item = dao.getInventoryItemById(itemId) ?: return
+        
+        // Update quantity
+        val newQuantity = (item.currentQuantity - quantity).coerceAtLeast(0.0)
+        dao.updateInventoryQuantity(itemId, newQuantity)
+        
+        // Record transaction
+        val transaction = StockTransactionEntity(
+            itemId = itemId,
+            type = "OUT",
+            quantity = quantity,
+            locationId = locationId,
+            employeeId = employeeId
+        )
+        dao.insertStockTransaction(transaction)
+    }
+    
+    fun getStockTransactions(itemId: Int): Flow<List<StockTransactionEntity>> = 
+        dao.getTransactionsForItem(itemId)
+
 }

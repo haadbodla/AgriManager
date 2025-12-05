@@ -18,6 +18,7 @@ import com.example.agrimanager.ui.location.LocationListScreen
 import com.example.agrimanager.ui.machine.MachineListScreen
 import com.example.agrimanager.ui.employee.EmployeeListScreen
 import com.example.agrimanager.ui.employee.SalaryScreen
+import com.example.agrimanager.ui.inventory.InventoryListScreen
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -57,6 +58,7 @@ class MainActivity : ComponentActivity() {
                         onFuelClick = { navController.navigate("machine_list") },
                         onBillClick = { navController.navigate("bill_list") },
                         onSalaryClick = { navController.navigate("employee_list") },
+                        onInventoryClick = { navController.navigate("inventory_list") },
                         onLogoutClick = {
                             authRepository.signOut()
                             navController.navigate("login") {
@@ -98,6 +100,10 @@ class MainActivity : ComponentActivity() {
 
                 composable("location_list") {
                     LocationListScreen(onBackClick = { navController.popBackStack() })
+                }
+
+                composable("inventory_list") {
+                    InventoryListScreen(onNavigateBack = { navController.popBackStack() })
                 }
             }
         }    }
