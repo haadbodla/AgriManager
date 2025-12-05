@@ -15,9 +15,10 @@ import com.example.agrimanager.data.local.MachineEntity
         TransactionEntity::class,
         InventoryItemEntity::class,
         StockTransactionEntity::class,
-        LaborLogEntity::class
+        LaborLogEntity::class,
+        MaintenanceLogEntity::class
     ],
-    version = 5, exportSchema = false
+    version = 6, exportSchema = false
 )
 abstract class FarmDatabase : RoomDatabase() {
     abstract fun farmDao(): FarmDao

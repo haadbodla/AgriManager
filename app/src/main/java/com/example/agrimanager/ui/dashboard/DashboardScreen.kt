@@ -28,6 +28,7 @@ fun DashboardScreen(
     onSalaryClick: () -> Unit,
     onInventoryClick: () -> Unit,
     onLaborClick: () -> Unit,
+    onMaintenanceClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
     // 1. Define the Menu Data
@@ -37,7 +38,7 @@ fun DashboardScreen(
         DashboardItem("Stock", Color(0xFF4CAF50), Icons.Default.Inventory) { onInventoryClick() },
         DashboardItem("Bill", Color(0xFF9C27B0), Icons.Default.Receipt) { onBillClick() },
         DashboardItem("Salary", Color(0xFF009688), Icons.Default.AttachMoney) { onSalaryClick() },
-        DashboardItem("Maint", Color(0xFFFF5722), Icons.Default.Build) { /* Idle */ }
+        DashboardItem("Maint", Color(0xFFFF5722), Icons.Default.Build) { onMaintenanceClick() }
     )
 
     Scaffold(

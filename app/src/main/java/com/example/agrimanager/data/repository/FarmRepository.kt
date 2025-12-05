@@ -223,4 +223,17 @@ class FarmRepository @Inject constructor(
         dao.deleteLaborLog(log)
     }
 
+
+    // ================== MAINTENANCE LOG OPERATIONS ==================
+    
+    fun getAllMaintenanceLogs(): Flow<List<MaintenanceLogWithMachine>> = dao.getAllMaintenanceLogsWithMachine()
+    
+    suspend fun addMaintenanceLog(log: MaintenanceLogEntity) {
+        dao.insertMaintenanceLog(log)
+    }
+    
+    suspend fun deleteMaintenanceLog(log: MaintenanceLogEntity) {
+        dao.deleteMaintenanceLog(log)
+    }
+
 }

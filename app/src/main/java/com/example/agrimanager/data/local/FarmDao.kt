@@ -131,4 +131,30 @@ interface FarmDao {
 
     @Query("SELECT * FROM labor_logs WHERE log_id = :id")
     suspend fun getLaborLogById(id: Int): LaborLogEntity?
+
+    // --- Maintenance Logs ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMaintenanceLog(log: MaintenanceLogEntity): Long
+
+    @Query("""
+        SELECT 
+            m.log_id as id,
+            m.machine_id as machineId,
+            ma.name as machineName,
+            m.tag as tag,
+            m.cost as cost,
+            m.mechanic_name as mechanicName,
+            m.description as description,
+            m.date as date
+        FROM maintenance_logs m
+        INNER JOIN machines ma ON m.machine_id = ma.machine_id
+        ORDER BY m.date DESC
+    """)
+    fun getAllMaintenanceLogsWithMachine(): Flow<List<MaintenanceLogWithMachine>>
+
+    @Delete
+    suspend fun deleteMaintenanceLog(log: MaintenanceLogEntity)
+
+    @Query("SELECT * FROM maintenance_logs WHERE log_id = :id")
+    suspend fun getMaintenanceLogById(id: Int): MaintenanceLogEntity?
 }
