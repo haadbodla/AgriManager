@@ -106,4 +106,29 @@ interface FarmDao {
 
     @Query("SELECT * FROM stock_transactions WHERE item_id = :itemId ORDER BY date DESC")
     fun getTransactionsForItem(itemId: Int): Flow<List<StockTransactionEntity>>
+
+    // --- Labor Logs ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLaborLog(log: LaborLogEntity): Long
+
+    @Query("""
+        SELECT 
+            l.log_id as id,
+            l.employee_id as employeeId,
+            e.name as employeeName,
+            l.labor_count as laborCount,
+            l.work_type as workType,
+            l.total_amount as totalAmount,
+            l.date as date
+        FROM labor_logs l
+        INNER JOIN employees e ON l.employee_id = e.id
+        ORDER BY l.date DESC
+    """)
+    fun getAllLaborLogsWithEmployee(): Flow<List<LaborLogWithEmployee>>
+
+    @Delete
+    suspend fun deleteLaborLog(log: LaborLogEntity)
+
+    @Query("SELECT * FROM labor_logs WHERE log_id = :id")
+    suspend fun getLaborLogById(id: Int): LaborLogEntity?
 }

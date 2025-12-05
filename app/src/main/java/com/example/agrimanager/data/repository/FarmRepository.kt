@@ -210,4 +210,17 @@ class FarmRepository @Inject constructor(
     fun getStockTransactions(itemId: Int): Flow<List<StockTransactionEntity>> = 
         dao.getTransactionsForItem(itemId)
 
+
+    // ================== LABOR LOG OPERATIONS ==================
+    
+    fun getAllLaborLogs(): Flow<List<LaborLogWithEmployee>> = dao.getAllLaborLogsWithEmployee()
+    
+    suspend fun addLaborLog(log: LaborLogEntity) {
+        dao.insertLaborLog(log)
+    }
+    
+    suspend fun deleteLaborLog(log: LaborLogEntity) {
+        dao.deleteLaborLog(log)
+    }
+
 }

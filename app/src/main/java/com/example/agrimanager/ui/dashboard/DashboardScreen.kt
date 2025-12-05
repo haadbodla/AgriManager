@@ -27,12 +27,13 @@ fun DashboardScreen(
     onBillClick: () -> Unit,
     onSalaryClick: () -> Unit,
     onInventoryClick: () -> Unit,
+    onLaborClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
     // 1. Define the Menu Data
     val menuItems = listOf(
         DashboardItem("Fuel", Color(0xFFFFC107), Icons.Default.LocalGasStation) { onFuelClick() },
-        DashboardItem("Labor", Color(0xFF2196F3), Icons.Default.Person) { /* Idle */ },
+        DashboardItem("Labor", Color(0xFF2196F3), Icons.Default.Person) { onLaborClick() },
         DashboardItem("Stock", Color(0xFF4CAF50), Icons.Default.Inventory) { onInventoryClick() },
         DashboardItem("Bill", Color(0xFF9C27B0), Icons.Default.Receipt) { onBillClick() },
         DashboardItem("Salary", Color(0xFF009688), Icons.Default.AttachMoney) { onSalaryClick() },
