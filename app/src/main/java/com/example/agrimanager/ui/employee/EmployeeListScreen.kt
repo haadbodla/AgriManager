@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,6 +22,7 @@ import com.example.agrimanager.data.local.EmployeeEntity
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmployeeListScreen(
+    onNavigateBack: () -> Unit,
     navController: NavController,
     viewModel: EmployeeViewModel = hiltViewModel()
 ) {
@@ -28,7 +30,19 @@ fun EmployeeListScreen(
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Employees") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Employees") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Employee")

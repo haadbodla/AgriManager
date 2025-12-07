@@ -44,14 +44,14 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = { Text("AgriManager Dashboard", fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = onLogoutClick) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )

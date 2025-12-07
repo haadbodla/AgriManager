@@ -79,7 +79,10 @@ class MainActivity : ComponentActivity() {
 
                 // Employee List
                 composable("employee_list") {
-                    EmployeeListScreen(navController = navController)
+                    EmployeeListScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        navController = navController
+                    )
                 }
 
                 // Salary Screen

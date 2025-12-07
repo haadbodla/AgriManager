@@ -33,8 +33,6 @@ fun BillListScreen(
     val locations by viewModel.locations.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
 
-    val totalPaid = bills.sumOf { it.bill.amount }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -50,16 +48,6 @@ fun BillListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showDialog = true }) { Icon(Icons.Default.Add, "Add Bill") }
-        },
-        bottomBar = {
-            BottomAppBar {
-                Text(
-                    "Total Farm Cost: Rs. $totalPaid",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
         }
     ) { paddingValues ->
         if (bills.isEmpty()) {
