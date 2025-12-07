@@ -157,4 +157,46 @@ interface FarmDao {
 
     @Query("SELECT * FROM maintenance_logs WHERE log_id = :id")
     suspend fun getMaintenanceLogById(id: Int): MaintenanceLogEntity?
+
+    // ================== ANALYTICS QUERIES ==================
+
+    // Get total fuel costs for current month
+    @Query("""
+        SELECT SUM(total_cost) 
+        FROM fuel_logs 
+        WHERE date >= :startOfMonth AND date <= :endOfMonth
+    """)
+    fun getTotalFuelCostThisMonth(startOfMonth: Long, endOfMonth: Long): Flow<Double?>
+
+    // Get total bills for current month
+    @Query("""
+        SELECT SUM(amount) 
+        FROM bills 
+        WHERE date_added >= :startOfMonth AND date_added <= :endOfMonth
+    """)
+    fun getTotalBillsThisMonth(startOfMonth: Long, endOfMonth: Long): Flow<Double?>
+
+    // Get total labor costs for current month
+    @Query("""
+        SELECT SUM(total_amount) 
+        FROM labor_logs 
+        WHERE date >= :startOfMonth AND date <= :endOfMonth
+    """)
+    fun getTotalLaborCostThisMonth(startOfMonth: Long, endOfMonth: Long): Flow<Double?>
+
+    // Get total maintenance costs for current month
+    @Query("""
+        SELECT SUM(cost) 
+        FROM maintenance_logs 
+        WHERE date >= :startOfMonth AND date <= :endOfMonth
+    """)
+    fun getTotalMaintenanceCostThisMonth(startOfMonth: Long, endOfMonth: Long): Flow<Double?>
+
+    // Get total stock purchase costs for current month
+    @Query("""
+        SELECT SUM(total_cost) 
+        FROM stock_transactions 
+        WHERE type = 'IN' AND date >= :startOfMonth AND date <= :endOfMonth
+    """)
+    fun getTotalStockPurchasesThisMonth(startOfMonth: Long, endOfMonth: Long): Flow<Double?>
 }

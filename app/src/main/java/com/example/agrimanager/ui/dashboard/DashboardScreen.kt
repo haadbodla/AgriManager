@@ -29,6 +29,7 @@ fun DashboardScreen(
     onInventoryClick: () -> Unit,
     onLaborClick: () -> Unit,
     onMaintenanceClick: () -> Unit,
+    onAnalyticsClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
     // 1. Define the Menu Data
@@ -79,6 +80,23 @@ fun DashboardScreen(
                 items(menuItems) { item ->
                     DashboardButton(item)
                 }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Analytics Button
+            Button(
+                onClick = onAnalyticsClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF673AB7)
+                )
+            ) {
+                Icon(Icons.Default.Analytics, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("View Expense Analytics", fontSize = 16.sp)
             }
         }
     }

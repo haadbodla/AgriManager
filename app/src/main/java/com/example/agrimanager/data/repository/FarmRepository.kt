@@ -1,6 +1,7 @@
 package com.example.agrimanager.data.repository
 
 import android.content.Context
+import androidx.compose.ui.graphics.Color
 import androidx.work.* // Imports WorkManager, Constraints, NetworkType, etc.
 import com.example.agrimanager.data.local.*
 import com.example.agrimanager.ui.*
@@ -8,6 +9,8 @@ import com.example.agrimanager.workers.FirestoreSyncWorker
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import java.util.Calendar
 import java.util.concurrent.TimeUnit // <--- Crucial import for time
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -143,10 +146,17 @@ class FarmRepository @Inject constructor(
     }
     // ================== EMPLOYEE OPERATIONS ==================
     suspend fun insertEmployee(employee: EmployeeEntity) {
-        dao.insertEmployee(employee)
+        val id = dao.insertEmployee(employee)
+        val data = mapOf(
+            "id" to id.toInt(),
+            "name" to employee.name,
+            "baseSalary" to employee.baseSalary
+        )
+        scheduleSync("employees", id.toString(), data)
     }
     suspend fun deleteEmployee(employee: EmployeeEntity) {
         dao.deleteEmployee(employee)
+        scheduleSync("employees", employee.id.toString(), emptyMap(), isDelete = true)
     }
     fun getAllEmployees(): Flow<List<EmployeeEntity>> = dao.getAllEmployees()
 
@@ -154,7 +164,15 @@ class FarmRepository @Inject constructor(
 
     // ================== TRANSACTION OPERATIONS ==================
     suspend fun insertTransaction(transaction: TransactionEntity) {
-        dao.insertTransaction(transaction)
+        val id = dao.insertTransaction(transaction)
+        val data = mapOf(
+            "id" to id.toInt(),
+            "employeeId" to transaction.employeeId,
+            "amount" to transaction.amount,
+            "type" to transaction.type,
+            "timestamp" to transaction.timestamp
+        )
+        scheduleSync("transactions", id.toString(), data)
     }
 
     fun getTransactionsForEmployee(employeeId: Int): Flow<List<TransactionEntity>> = dao.getTransactionsForEmployee(employeeId)
@@ -167,7 +185,17 @@ class FarmRepository @Inject constructor(
     fun getAllInventoryItems(): Flow<List<InventoryItemEntity>> = dao.getAllInventoryItems()
     
     suspend fun addInventoryItem(item: InventoryItemEntity) {
-        dao.insertInventoryItem(item)
+        val id = dao.insertInventoryItem(item)
+        val data = mapOf(
+            "id" to id.toInt(),
+            "name" to item.name,
+            "category" to item.category,
+            "unit" to item.unit,
+            "currentQuantity" to item.currentQuantity,
+            "reorderLevel" to item.reorderLevel,
+            "dateAdded" to item.dateAdded
+        )
+        scheduleSync("inventory_items", id.toString(), data)
     }
     
     suspend fun recordPurchase(itemId: Int, quantity: Double, totalCost: Double) {
@@ -178,6 +206,18 @@ class FarmRepository @Inject constructor(
         val newQuantity = item.currentQuantity + quantity
         dao.updateInventoryQuantity(itemId, newQuantity)
         
+        // Sync updated quantity to Firestore
+        val itemData = mapOf(
+            "id" to itemId,
+            "name" to item.name,
+            "category" to item.category,
+            "unit" to item.unit,
+            "currentQuantity" to newQuantity,
+            "reorderLevel" to item.reorderLevel,
+            "dateAdded" to item.dateAdded
+        )
+        scheduleSync("inventory_items", itemId.toString(), itemData)
+        
         // Record transaction
         val transaction = StockTransactionEntity(
             itemId = itemId,
@@ -185,7 +225,18 @@ class FarmRepository @Inject constructor(
             quantity = quantity,
             totalCost = totalCost
         )
-        dao.insertStockTransaction(transaction)
+        val transId = dao.insertStockTransaction(transaction)
+        
+        // Sync transaction to Firestore
+        val transData = mapOf(
+            "id" to transId.toInt(),
+            "itemId" to itemId,
+            "type" to "IN",
+            "quantity" to quantity,
+            "totalCost" to totalCost,
+            "date" to transaction.date
+        )
+        scheduleSync("stock_transactions", transId.toString(), transData)
     }
     
     suspend fun recordStockOut(itemId: Int, quantity: Double, locationId: Int, employeeId: Int) {
@@ -196,6 +247,18 @@ class FarmRepository @Inject constructor(
         val newQuantity = (item.currentQuantity - quantity).coerceAtLeast(0.0)
         dao.updateInventoryQuantity(itemId, newQuantity)
         
+        // Sync updated quantity to Firestore
+        val itemData = mapOf(
+            "id" to itemId,
+            "name" to item.name,
+            "category" to item.category,
+            "unit" to item.unit,
+            "currentQuantity" to newQuantity,
+            "reorderLevel" to item.reorderLevel,
+            "dateAdded" to item.dateAdded
+        )
+        scheduleSync("inventory_items", itemId.toString(), itemData)
+        
         // Record transaction
         val transaction = StockTransactionEntity(
             itemId = itemId,
@@ -204,7 +267,19 @@ class FarmRepository @Inject constructor(
             locationId = locationId,
             employeeId = employeeId
         )
-        dao.insertStockTransaction(transaction)
+        val transId = dao.insertStockTransaction(transaction)
+        
+        // Sync transaction to Firestore
+        val transData = mapOf(
+            "id" to transId.toInt(),
+            "itemId" to itemId,
+            "type" to "OUT",
+            "quantity" to quantity,
+            "locationId" to locationId,
+            "employeeId" to employeeId,
+            "date" to transaction.date
+        )
+        scheduleSync("stock_transactions", transId.toString(), transData)
     }
     
     fun getStockTransactions(itemId: Int): Flow<List<StockTransactionEntity>> = 
@@ -216,11 +291,21 @@ class FarmRepository @Inject constructor(
     fun getAllLaborLogs(): Flow<List<LaborLogWithEmployee>> = dao.getAllLaborLogsWithEmployee()
     
     suspend fun addLaborLog(log: LaborLogEntity) {
-        dao.insertLaborLog(log)
+        val id = dao.insertLaborLog(log)
+        val data = mapOf(
+            "id" to id.toInt(),
+            "employeeId" to log.employeeId,
+            "laborCount" to log.laborCount,
+            "workType" to log.workType,
+            "totalAmount" to log.totalAmount,
+            "date" to log.date
+        )
+        scheduleSync("labor_logs", id.toString(), data)
     }
     
     suspend fun deleteLaborLog(log: LaborLogEntity) {
         dao.deleteLaborLog(log)
+        scheduleSync("labor_logs", log.id.toString(), emptyMap(), isDelete = true)
     }
 
 
@@ -229,11 +314,78 @@ class FarmRepository @Inject constructor(
     fun getAllMaintenanceLogs(): Flow<List<MaintenanceLogWithMachine>> = dao.getAllMaintenanceLogsWithMachine()
     
     suspend fun addMaintenanceLog(log: MaintenanceLogEntity) {
-        dao.insertMaintenanceLog(log)
+        val id = dao.insertMaintenanceLog(log)
+        val data = mapOf(
+            "id" to id.toInt(),
+            "machineId" to log.machineId,
+            "tag" to log.tag,
+            "cost" to log.cost,
+            "mechanicName" to log.mechanicName,
+            "description" to log.description,
+            "date" to log.date
+        )
+        scheduleSync("maintenance_logs", id.toString(), data)
     }
     
     suspend fun deleteMaintenanceLog(log: MaintenanceLogEntity) {
         dao.deleteMaintenanceLog(log)
+        scheduleSync("maintenance_logs", log.id.toString(), emptyMap(), isDelete = true)
+    }
+
+
+    // ================== ANALYTICS OPERATIONS ==================
+
+    fun getMonthlyExpenseBreakdown(): Flow<ExpenseBreakdown> {
+        val (startOfMonth, endOfMonth) = getCurrentMonthRange()
+        
+        return combine(
+            dao.getTotalFuelCostThisMonth(startOfMonth, endOfMonth),
+            dao.getTotalBillsThisMonth(startOfMonth, endOfMonth),
+            dao.getTotalLaborCostThisMonth(startOfMonth, endOfMonth),
+            dao.getTotalMaintenanceCostThisMonth(startOfMonth, endOfMonth),
+            dao.getTotalStockPurchasesThisMonth(startOfMonth, endOfMonth)
+        ) { fuel, bills, labor, maintenance, stock ->
+            
+            val fuelCost = fuel ?: 0.0
+            val billsCost = bills ?: 0.0
+            val laborCost = labor ?: 0.0
+            val maintenanceCost = maintenance ?: 0.0
+            val stockCost = stock ?: 0.0
+            
+            val total = fuelCost + billsCost + laborCost + maintenanceCost + stockCost
+            
+            val categories = listOf(
+                ExpenseCategory("Fuel", fuelCost, Color(0xFFFFC107), if (total > 0) (fuelCost / total * 100).toFloat() else 0f),
+                ExpenseCategory("Bills", billsCost, Color(0xFF9C27B0), if (total > 0) (billsCost / total * 100).toFloat() else 0f),
+                ExpenseCategory("Labor", laborCost, Color(0xFF2196F3), if (total > 0) (laborCost / total * 100).toFloat() else 0f),
+                ExpenseCategory("Maintenance", maintenanceCost, Color(0xFFFF5722), if (total > 0) (maintenanceCost / total * 100).toFloat() else 0f),
+                ExpenseCategory("Stock", stockCost, Color(0xFF4CAF50), if (total > 0) (stockCost / total * 100).toFloat() else 0f)
+            ).filter { it.amount > 0 } // Only show categories with expenses
+            
+            ExpenseBreakdown(total, categories)
+        }
+    }
+
+    private fun getCurrentMonthRange(): Pair<Long, Long> {
+        val calendar = Calendar.getInstance()
+        
+        // Start of month
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startOfMonth = calendar.timeInMillis
+        
+        // End of month
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endOfMonth = calendar.timeInMillis
+        
+        return Pair(startOfMonth, endOfMonth)
     }
 
 }
