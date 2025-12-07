@@ -25,6 +25,7 @@ import com.example.agrimanager.data.local.EmployeeEntity
 @Composable
 fun InventoryListScreen(
     onNavigateBack: () -> Unit,
+    onItemClick: (Int) -> Unit,
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val inventoryItems by viewModel.inventoryItems.collectAsState()
@@ -78,7 +79,7 @@ fun InventoryListScreen(
                 items(inventoryItems) { item ->
                     InventoryItemCard(
                         item = item,
-                        onClick = { viewModel.openStockOutDialog(item) }
+                        onClick = { onItemClick(item.id) }
                     )
                 }
             }

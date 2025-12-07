@@ -1,3 +1,4 @@
+// fileName: haadbodla/agrimanager/AgriManager-Antigraviry/app/src/main/java/com/example/agrimanager/ui/employee/SalaryViewModel.kt
 package com.example.agrimanager.ui.employee
 
 import androidx.lifecycle.ViewModel
@@ -16,8 +17,16 @@ class SalaryViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _employeeId = MutableStateFlow(-1)
+
+    // Employee Details
     private val _employee = MutableStateFlow<EmployeeEntity?>(null)
     val employee: StateFlow<EmployeeEntity?> = _employee.asStateFlow()
+
+    // Transaction History (The missing piece)
+    val transactions: StateFlow<List<TransactionEntity>> = _employeeId.flatMapLatest { id ->
+        if (id < 0) flowOf(emptyList())
+        else repository.getTransactionsForEmployee(id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Load employee data
     fun loadEmployee(id: Int) {

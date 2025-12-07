@@ -1,22 +1,34 @@
+// fileName: haadbodla/agrimanager/AgriManager-Antigraviry/app/src/main/java/com/example/agrimanager/ui/employee/SalaryScreen.kt
 package com.example.agrimanager.ui.employee
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.agrimanager.data.local.EmployeeEntity
+import com.example.agrimanager.data.local.TransactionEntity
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SalaryScreen(
@@ -24,10 +36,12 @@ fun SalaryScreen(
     navController: NavController,
     viewModel: SalaryViewModel = hiltViewModel()
 ) {
-    // Load employee and transactions
     val employee by viewModel.employee.collectAsState()
     val balance by viewModel.balance.collectAsState()
+    val transactions by viewModel.transactions.collectAsState()
+
     var showAdvanceDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(employeeId) {
         viewModel.loadEmployee(employeeId)
     }
@@ -35,12 +49,16 @@ fun SalaryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(employee?.name ?: "Employee") },
+                title = { Text(employee?.name ?: "Employee Ledger") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { paddingValues ->
@@ -48,57 +66,108 @@ fun SalaryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Card(
-                shape = RoundedCornerShape(8.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                modifier = Modifier.fillMaxWidth()
+            // 1. Balance Summary Card
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation = 4.dp
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = employee?.name ?: "",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        text = "Current Balance",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    val bal = balance ?: 0.0
+                    val isPositive = bal >= 0
+
                     Text(
-                        text = "Base Salary: ₹${employee?.baseSalary ?: 0.0}",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = if(isPositive) "₹${bal.toInt()}" else "- ₹${Math.abs(bal.toInt())}",
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isPositive) Color(0xFF2E7D32) else Color(0xFFC62828)
                     )
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    val balanceText = if ((balance ?: 0.0) >= 0) {
-                        "₹${balance?.toInt()} Payable to Employee"
-                    } else {
-                        "₹${(-balance!!).toInt()} Recoverable from Employee"
+
+                    Surface(
+                        color = if(isPositive) Color(0xFFE8F5E9) else Color(0xFFFFEBEE),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = if (isPositive) "Payable to Employee" else "Recoverable from Employee",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isPositive) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                        )
                     }
-                    Text(
-                        text = balanceText,
-                        color = if ((balance ?: 0.0) >= 0) Color(0xFF4CAF50) else Color(0xFFF44336),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
                 }
             }
+
+            // 2. Action Buttons
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
                     onClick = { showAdvanceDialog = true },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
                 ) {
                     Text("Give Advance")
                 }
                 Button(
                     onClick = { viewModel.addSalary() },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF43A047))
                 ) {
                     Text("Add Salary")
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 3. Transaction History Header
+            Text(
+                text = "Transaction History",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 4. Transaction List
+            if (transactions.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No transactions yet", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(transactions) { transaction ->
+                        TransactionItem(transaction)
+                    }
+                }
+            }
         }
+
         if (showAdvanceDialog) {
             AdvanceDialog(
                 onDismiss = { showAdvanceDialog = false },
@@ -112,12 +181,55 @@ fun SalaryScreen(
 }
 
 @Composable
+fun TransactionItem(transaction: TransactionEntity) {
+    val isCredit = transaction.type == "CREDIT"
+    val date = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(transaction.timestamp))
+
+    ListItem(
+        headlineContent = {
+            Text(
+                text = if (isCredit) "Salary Added" else "Advance Given",
+                fontWeight = FontWeight.SemiBold
+            )
+        },
+        supportingContent = {
+            Text(text = date, style = MaterialTheme.typography.bodySmall)
+        },
+        leadingContent = {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (isCredit) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isCredit) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                    contentDescription = null,
+                    tint = if (isCredit) Color(0xFF2E7D32) else Color(0xFFC62828),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        },
+        trailingContent = {
+            Text(
+                text = "₹${transaction.amount.toInt()}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isCredit) Color(0xFF2E7D32) else Color(0xFFC62828)
+            )
+        }
+    )
+    Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+}
+
+@Composable
 private fun AdvanceDialog(
     onDismiss: () -> Unit,
     onConfirm: (Double) -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
-    val isValid = amountText.toDoubleOrNull()?.let { it > 0 } == true
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Give Advance") },
@@ -125,12 +237,20 @@ private fun AdvanceDialog(
             OutlinedTextField(
                 value = amountText,
                 onValueChange = { amountText = it },
-                label = { Text("Amount") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                label = { Text("Enter Amount") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
             )
         },
         confirmButton = {
-            Button(onClick = { onConfirm(amountText.toDouble()) }, enabled = isValid) {
+            Button(
+                onClick = {
+                    amountText.toDoubleOrNull()?.let {
+                        if (it > 0) onConfirm(it)
+                    }
+                },
+                enabled = amountText.isNotBlank()
+            ) {
                 Text("Confirm")
             }
         },

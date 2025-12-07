@@ -1,3 +1,4 @@
+// fileName: haadbodla/agrimanager/AgriManager-Antigraviry/app/src/main/java/com/example/agrimanager/ui/inventory/InventoryViewModel.kt
 package com.example.agrimanager.ui.inventory
 
 import androidx.lifecycle.ViewModel
@@ -5,30 +6,69 @@ import androidx.lifecycle.viewModelScope
 import com.example.agrimanager.data.local.EmployeeEntity
 import com.example.agrimanager.data.local.InventoryItemEntity
 import com.example.agrimanager.data.local.LocationEntity
+import com.example.agrimanager.data.local.StockTransactionEntity
 import com.example.agrimanager.data.repository.FarmRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// Simple helper class for the UI (Matches ID to Name)
+data class StockHistoryUiModel(
+    val transaction: StockTransactionEntity,
+    val locationName: String? = null,
+    val employeeName: String? = null
+)
+
 @HiltViewModel
 class InventoryViewModel @Inject constructor(
     private val repository: FarmRepository
 ) : ViewModel() {
 
-    // Inventory items
+    // --- Existing Flows ---
     val inventoryItems: StateFlow<List<InventoryItemEntity>> = repository.getAllInventoryItems()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Locations for "Where used?" dropdown
     val locations: StateFlow<List<LocationEntity>> = repository.getAllLocations()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Employees for "Who took it?" dropdown
     val employees: StateFlow<List<EmployeeEntity>> = repository.getAllEmployees()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // UI State for dialogs
+    // --- NEW: History Logic ---
+    private val _selectedItemId = MutableStateFlow(-1)
+
+    // 1. Get the item details (for the top card)
+    val selectedItem: StateFlow<InventoryItemEntity?> = combine(_selectedItemId, inventoryItems) { id, items ->
+        items.find { it.id == id }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // 2. Get the history and MATCH NAMES (The logic you needed)
+    val selectedItemHistory: StateFlow<List<StockHistoryUiModel>> = _selectedItemId.flatMapLatest { id ->
+        if (id == -1) flowOf(emptyList())
+        else {
+            combine(
+                repository.getStockTransactions(id), // Fetch transactions
+                locations,                           // Fetch locations
+                employees                            // Fetch employees
+            ) { transactions, locs, emps ->
+                // Map the IDs to Names
+                transactions.map { tx ->
+                    StockHistoryUiModel(
+                        transaction = tx,
+                        locationName = locs.find { it.id == tx.locationId }?.name,
+                        employeeName = emps.find { it.id == tx.employeeId }?.name
+                    )
+                }
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun selectItem(itemId: Int) {
+        _selectedItemId.value = itemId
+    }
+
+    // --- Existing Dialog Logic ---
     private val _showPurchaseDialog = MutableStateFlow(false)
     val showPurchaseDialog: StateFlow<Boolean> = _showPurchaseDialog.asStateFlow()
 
@@ -65,10 +105,12 @@ class InventoryViewModel @Inject constructor(
                 currentQuantity = quantity
             )
             repository.addInventoryItem(item)
-            
-            // If there's an initial purchase, record it
+
+            // Record initial purchase if quantity > 0
             if (quantity > 0 && totalCost > 0) {
-                // Get the newly created item to get its ID
+                // Wait briefly for the item to be inserted so we can find it
+                // A better way is for repository.addInventoryItem to return the ID, but this works for now
+                kotlinx.coroutines.delay(100)
                 val items = inventoryItems.value
                 val newItem = items.find { it.name == name && it.category == category }
                 newItem?.let {

@@ -23,6 +23,7 @@ import com.example.agrimanager.ui.labor.AddLaborLogScreen
 import com.example.agrimanager.ui.labor.LaborListScreen
 import com.example.agrimanager.ui.maintenance.AddMaintenanceLogScreen
 import com.example.agrimanager.ui.maintenance.MaintenanceListScreen
+import com.example.agrimanager.ui.inventory.InventoryDetailScreen
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -109,7 +110,21 @@ class MainActivity : ComponentActivity() {
                 }
 
                 composable("inventory_list") {
-                    InventoryListScreen(onNavigateBack = { navController.popBackStack() })
+                    InventoryListScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        // ADD THIS: Navigate to Detail Screen
+                        onItemClick = { itemId -> navController.navigate("inventory_detail/$itemId") }
+                    )
+                }
+                composable(
+                    "inventory_detail/{itemId}",
+                    arguments = listOf(navArgument("itemId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val id = backStackEntry.arguments?.getInt("itemId") ?: -1
+                    InventoryDetailScreen(
+                        itemId = id,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
 
                 composable("labor_list") {
