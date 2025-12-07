@@ -93,7 +93,10 @@ class MainActivity : ComponentActivity() {
 
                 // Existing routes
                 composable("machine_list") {
-                    MachineListScreen(onMachineClick = { id -> navController.navigate("fuel_logs/$id") })
+                    MachineListScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onMachineClick = { id -> navController.navigate("fuel_logs/$id") }
+                    )
                 }
 
                 composable("fuel_logs/{machineId}", arguments = listOf(navArgument("machineId") { type = NavType.IntType })) {
