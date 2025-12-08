@@ -7,7 +7,8 @@ import javax.inject.Singleton
 
 @Singleton
 class AuthRepository @Inject constructor(
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val farmRepository: FarmRepository  // NEW: Inject FarmRepository for sync
 ) {
     // Sign Up new user
     suspend fun signUp(email: String, password: String): Result<Boolean> = try {
@@ -20,6 +21,12 @@ class AuthRepository @Inject constructor(
     // Sign In existing user
     suspend fun signIn(email: String, password: String): Result<Boolean> = try {
         auth.signInWithEmailAndPassword(email, password).await()
+        
+        // NEW: Download data from Firestore if local database is empty
+        if (farmRepository.isLocalDatabaseEmpty()) {
+            farmRepository.downloadAllDataFromFirestore()
+        }
+        
         Result.success(true)
     } catch (e: Exception) {
         Result.failure(e)

@@ -192,11 +192,20 @@ interface FarmDao {
     """)
     fun getTotalMaintenanceCostThisMonth(startOfMonth: Long, endOfMonth: Long): Flow<Double?>
 
-    // Get total stock purchase costs for current month
     @Query("""
         SELECT SUM(total_cost) 
         FROM stock_transactions 
         WHERE type = 'IN' AND date >= :startOfMonth AND date <= :endOfMonth
     """)
     fun getTotalStockPurchasesThisMonth(startOfMonth: Long, endOfMonth: Long): Flow<Double?>
+
+    // --- Count Methods for Sync Detection ---
+    @Query("SELECT COUNT(*) FROM machines")
+    suspend fun getMachineCount(): Int
+
+    @Query("SELECT COUNT(*) FROM employees")
+    suspend fun getEmployeeCount(): Int
+
+    @Query("SELECT COUNT(*) FROM locations")
+    suspend fun getLocationCount(): Int
 }

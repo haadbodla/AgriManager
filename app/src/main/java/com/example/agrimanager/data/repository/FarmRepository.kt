@@ -7,9 +7,11 @@ import com.example.agrimanager.data.local.*
 import com.example.agrimanager.ui.*
 import com.example.agrimanager.workers.FirestoreSyncWorker
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 import java.util.concurrent.TimeUnit // <--- Crucial import for time
 import javax.inject.Inject
@@ -377,7 +379,6 @@ class FarmRepository @Inject constructor(
         calendar.set(Calendar.MILLISECOND, 0)
         val startOfMonth = calendar.timeInMillis
         
-        // End of month
         calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
         calendar.set(Calendar.HOUR_OF_DAY, 23)
         calendar.set(Calendar.MINUTE, 59)
@@ -386,6 +387,249 @@ class FarmRepository @Inject constructor(
         val endOfMonth = calendar.timeInMillis
         
         return Pair(startOfMonth, endOfMonth)
+    }
+
+    // ================== FIRESTORE SYNC METHODS ==================
+
+    /**
+     * Check if local database is empty (first login on this device)
+     */
+    suspend fun isLocalDatabaseEmpty(): Boolean {
+        return dao.getMachineCount() == 0 &&
+               dao.getEmployeeCount() == 0 &&
+               dao.getLocationCount() == 0
+    }
+
+    /**
+     * Download all user data from Firestore and insert into local database
+     */
+    suspend fun downloadAllDataFromFirestore(): Result<Boolean> {
+        val userId = auth.currentUser?.uid ?: return Result.failure(Exception("Not logged in"))
+        
+        return try {
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            
+            // Download all collections
+            downloadMachines(db, userId)
+            downloadFuelLogs(db, userId)
+            downloadBills(db, userId)
+            downloadLocations(db, userId)
+            downloadEmployees(db, userId)
+            downloadTransactions(db, userId)
+            downloadInventoryItems(db, userId)
+            downloadStockTransactions(db, userId)
+            downloadLaborLogs(db, userId)
+            downloadMaintenanceLogs(db, userId)
+            
+            Result.success(true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun downloadMachines(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("machines")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val machine = MachineEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                name = data["name"] as? String ?: "",
+                serviceIntervalHours = (data["serviceIntervalHours"] as? Long)?.toInt() ?: 0,
+                lastServiceReading = (data["lastServiceReading"] as? Long)?.toInt() ?: 0
+            )
+            dao.insertMachine(machine)
+        }
+    }
+
+    private suspend fun downloadFuelLogs(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("fuel_logs")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val log = FuelLogEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                machineId = (data["machineId"] as? Long)?.toInt() ?: 0,
+                date = data["date"] as? Long ?: 0L,
+                liters = data["liters"] as? Double ?: 0.0,
+                rate = data["rate"] as? Double ?: 0.0,
+                totalCost = data["totalCost"] as? Double ?: 0.0,
+                hourMeterReading = (data["hourMeterReading"] as? Long)?.toInt() ?: 0
+            )
+            dao.insertFuelLog(log)
+        }
+    }
+
+    private suspend fun downloadBills(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("bills")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val bill = BillEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                locationId = (data["locationId"] as? Long)?.toInt() ?: 0,
+                billingMonth = data["billingMonth"] as? String ?: "",
+                amount = data["amount"] as? Double ?: 0.0,
+                dateAdded = data["dateAdded"] as? Long ?: 0L
+            )
+            dao.insertBill(bill)
+        }
+    }
+
+    private suspend fun downloadLocations(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("locations")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val location = LocationEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                name = data["name"] as? String ?: ""
+            )
+            dao.insertLocation(location)
+        }
+    }
+
+    private suspend fun downloadEmployees(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("employees")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val employee = EmployeeEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                name = data["name"] as? String ?: "",
+                baseSalary = data["baseSalary"] as? Double ?: 0.0
+            )
+            dao.insertEmployee(employee)
+        }
+    }
+
+    private suspend fun downloadTransactions(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("transactions")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val transaction = TransactionEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                employeeId = (data["employeeId"] as? Long)?.toInt() ?: 0,
+                amount = data["amount"] as? Double ?: 0.0,
+                type = data["type"] as? String ?: "DEBIT",
+                timestamp = data["timestamp"] as? Long ?: 0L
+            )
+            dao.insertTransaction(transaction)
+        }
+    }
+
+    private suspend fun downloadInventoryItems(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("inventory_items")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val item = InventoryItemEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                name = data["name"] as? String ?: "",
+                category = data["category"] as? String ?: "",
+                unit = data["unit"] as? String ?: "",
+                currentQuantity = data["currentQuantity"] as? Double ?: 0.0,
+                reorderLevel = data["reorderLevel"] as? Double ?: 0.0,
+                dateAdded = data["dateAdded"] as? Long ?: 0L
+            )
+            dao.insertInventoryItem(item)
+        }
+    }
+
+    private suspend fun downloadStockTransactions(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("stock_transactions")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val transaction = StockTransactionEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                itemId = (data["itemId"] as? Long)?.toInt() ?: 0,
+                type = data["type"] as? String ?: "IN",
+                quantity = data["quantity"] as? Double ?: 0.0,
+                totalCost = data["totalCost"] as? Double ?: 0.0,
+                date = data["date"] as? Long ?: 0L,
+                locationId = (data["locationId"] as? Long)?.toInt(),
+                employeeId = (data["employeeId"] as? Long)?.toInt()
+            )
+            dao.insertStockTransaction(transaction)
+        }
+    }
+
+    private suspend fun downloadLaborLogs(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("labor_logs")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val log = LaborLogEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                employeeId = (data["employeeId"] as? Long)?.toInt() ?: 0,
+                laborCount = (data["laborCount"] as? Long)?.toInt() ?: 0,
+                workType = data["workType"] as? String ?: "",
+                totalAmount = data["totalAmount"] as? Double ?: 0.0,
+                date = data["date"] as? Long ?: 0L
+            )
+            dao.insertLaborLog(log)
+        }
+    }
+
+    private suspend fun downloadMaintenanceLogs(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("maintenance_logs")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val log = MaintenanceLogEntity(
+                id = (data["id"] as? Long)?.toInt() ?: 0,
+                machineId = (data["machineId"] as? Long)?.toInt() ?: 0,
+                tag = data["tag"] as? String ?: "",
+                cost = data["cost"] as? Double ?: 0.0,
+                mechanicName = data["mechanicName"] as? String ?: "",
+                description = data["description"] as? String ?: "",
+                date = data["date"] as? Long ?: 0L
+            )
+            dao.insertMaintenanceLog(log)
+        }
     }
 
 }

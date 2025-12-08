@@ -28,7 +28,7 @@ fun AnalyticsScreen(
     viewModel: AnalyticsViewModel = hiltViewModel()
 ) {
     val breakdown by viewModel.expenseBreakdown.collectAsState()
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -55,11 +55,11 @@ fun AnalyticsScreen(
             breakdown?.let { data ->
                 // Total Expenses Card
                 TotalExpensesCard(totalExpenses = data.totalExpenses)
-                
+
                 // Pie Chart (Simple visual representation)
                 if (data.categories.isNotEmpty()) {
                     SimplePieChart(breakdown = data)
-                    
+
                     // Category Legend
                     CategoryLegend(categories = data.categories)
                 } else {
@@ -97,8 +97,12 @@ fun AnalyticsScreen(
 
 @Composable
 fun TotalExpensesCard(totalExpenses: Double) {
-    val formatter = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
-    
+    // CHANGED: Use NumberInstance instead of CurrencyInstance to control the prefix
+    val formatter = NumberFormat.getNumberInstance(Locale("en", "IN")).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -118,7 +122,8 @@ fun TotalExpensesCard(totalExpenses: Double) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = formatter.format(totalExpenses),
+                // CHANGED: Manually added "Rs." prefix
+                text = "Rs. " + formatter.format(totalExpenses),
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -146,7 +151,7 @@ fun SimplePieChart(breakdown: ExpenseBreakdown) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Simple horizontal bar chart
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -194,8 +199,12 @@ fun SimplePieChart(breakdown: ExpenseBreakdown) {
 
 @Composable
 fun CategoryLegend(categories: List<ExpenseCategory>) {
-    val formatter = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
-    
+    // CHANGED: Use NumberInstance instead of CurrencyInstance
+    val formatter = NumberFormat.getNumberInstance(Locale("en", "IN")).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -210,7 +219,7 @@ fun CategoryLegend(categories: List<ExpenseCategory>) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            
+
             categories.forEach { category ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -232,10 +241,11 @@ fun CategoryLegend(categories: List<ExpenseCategory>) {
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
-                    
+
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = formatter.format(category.amount),
+                            // CHANGED: Manually added "Rs." prefix
+                            text = "Rs. " + formatter.format(category.amount),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
