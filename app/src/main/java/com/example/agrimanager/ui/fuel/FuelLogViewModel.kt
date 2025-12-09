@@ -44,4 +44,40 @@ class FuelLogViewModel @Inject constructor(
             )
         }
     }
+
+    fun updateFuelLog(id: Int, liters: String, rate: String, hourMeter: String) {
+        val litersVal = liters.toDoubleOrNull() ?: return
+        val rateVal = rate.toDoubleOrNull() ?: return
+        val hourMeterVal = hourMeter.toIntOrNull() ?: 0
+
+        viewModelScope.launch {
+            repository.updateFuelLog(
+                FuelLogEntity(
+                    id = id,
+                    machineId = machineId,
+                    date = System.currentTimeMillis(),
+                    liters = litersVal,
+                    rate = rateVal,
+                    totalCost = litersVal * rateVal,
+                    hourMeterReading = hourMeterVal
+                )
+            )
+        }
+    }
+
+    fun deleteFuelLog(logId: Int) {
+        viewModelScope.launch {
+            repository.deleteFuelLog(
+                FuelLogEntity(
+                    id = logId,
+                    machineId = machineId,
+                    date = 0,
+                    liters = 0.0,
+                    rate = 0.0,
+                    totalCost = 0.0,
+                    hourMeterReading = 0
+                )
+            )
+        }
+    }
 }

@@ -189,17 +189,33 @@ fun InventoryItemCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Linear progress indicator (green → red)
-            val progress = if (item.reorderLevel > 0) {
-                (item.currentQuantity / (item.reorderLevel * 10)).toFloat().coerceIn(0f, 1f)
+            // Linear progress indicator with proper calculation
+            // Calculate progress based on current quantity vs a reasonable maximum
+            // Use reorderLevel * 10 as the "full" amount for better visualization
+            val maxQuantity = item.reorderLevel * 10
+            val progress = if (maxQuantity > 0) {
+                (item.currentQuantity / maxQuantity).toFloat().coerceIn(0f, 1f)
             } else {
-                1f
+                0f  // If no reorder level set, show empty
             }
             
-            val indicatorColor = if (item.currentQuantity <= item.reorderLevel) {
-                MaterialTheme.colorScheme.error // Red when at or below reorder level
-            } else {
-                Color(0xFF4CAF50) // Green when above reorder level
+            // Color logic:
+            // - Red: At or below reorder level (critical)
+            // - Yellow: Between reorder level and middle (50% of max)
+            // - Green: Above middle (healthy stock)
+            val indicatorColor = when {
+                item.currentQuantity <= 0 -> {
+                    MaterialTheme.colorScheme.error // Red when out of stock
+                }
+                item.currentQuantity <= item.reorderLevel -> {
+                    MaterialTheme.colorScheme.error // Red when at or below reorder level
+                }
+                item.currentQuantity <= (maxQuantity / 2) -> {
+                    Color(0xFFFFC107) // Yellow/Amber when in middle range
+                }
+                else -> {
+                    Color(0xFF4CAF50) // Green when stock is healthy
+                }
             }
 
             LinearProgressIndicator(

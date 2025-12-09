@@ -10,26 +10,38 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.SavedStateHandle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddLaborLogScreen(
+    logId: Int? = null,
     onNavigateBack: () -> Unit,
     viewModel: LaborViewModel = hiltViewModel()
 ) {
     val employees by viewModel.employees.collectAsState()
     
-    var selectedEmployeeId by remember { mutableStateOf<Int?>(null) }
-    var laborCount by remember { mutableStateOf("") }
-    var selectedWorkType by remember { mutableStateOf("") }
-    var totalAmount by remember { mutableStateOf("") }
+    // Load existing log if editing
+    var existingLog by remember { mutableStateOf<com.example.agrimanager.data.local.LaborLogEntity?>(null) }
+    
+    LaunchedEffect(logId) {
+        if (logId != null && logId > 0) {
+            existingLog = viewModel.getLaborLogById(logId)
+        }
+    }
+    
+    var selectedEmployeeId by remember(existingLog) { mutableStateOf(existingLog?.employeeId) }
+    var laborCount by remember(existingLog) { mutableStateOf(existingLog?.laborCount?.toString() ?: "") }
+    var selectedWorkType by remember(existingLog) { mutableStateOf(existingLog?.workType ?: "") }
+    var totalAmount by remember(existingLog) { mutableStateOf(existingLog?.totalAmount?.toString() ?: "") }
     
     val workTypes = listOf("Harvesting", "Watering", "Weeding", "Sowing", "Fertilizing")
+    val isEditMode = logId != null && logId > 0
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Labor Log") },
+                title = { Text(if (isEditMode) "Edit Labor Log" else "Add Labor Log") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -136,7 +148,11 @@ fun AddLaborLogScreen(
                     val amount = totalAmount.toDoubleOrNull()
                     
                     if (empId != null && count != null && amount != null && selectedWorkType.isNotEmpty()) {
-                        viewModel.addLaborLog(empId, count, selectedWorkType, amount)
+                        if (isEditMode) {
+                            viewModel.updateLaborLog(logId!!, empId, count, selectedWorkType, amount)
+                        } else {
+                            viewModel.addLaborLog(empId, count, selectedWorkType, amount)
+                        }
                         onNavigateBack()
                     }
                 },
@@ -146,7 +162,7 @@ fun AddLaborLogScreen(
                          selectedWorkType.isNotEmpty() && 
                          totalAmount.toDoubleOrNull() != null
             ) {
-                Text("Save Log")
+                Text(if (isEditMode) "Update Log" else "Save Log")
             }
         }
     }

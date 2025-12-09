@@ -60,6 +60,15 @@ interface FarmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFuelLog(log: FuelLogEntity): Long
 
+    @Update
+    suspend fun updateFuelLog(log: FuelLogEntity)
+
+    @Delete
+    suspend fun deleteFuelLog(log: FuelLogEntity)
+
+    @Query("SELECT * FROM fuel_logs WHERE log_id = :id")
+    suspend fun getFuelLogById(id: Int): FuelLogEntity?
+
     @Query("SELECT * FROM fuel_logs WHERE machine_id = :machineId ORDER BY date DESC")
     fun getFuelLogsForMachine(machineId: Int): Flow<List<FuelLogEntity>>
 
@@ -85,6 +94,15 @@ interface FarmDao {
     // --- Bills ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBill(bill: BillEntity): Long
+
+    @Update
+    suspend fun updateBill(bill: BillEntity)
+
+    @Delete
+    suspend fun deleteBill(bill: BillEntity)
+
+    @Query("SELECT * FROM bills WHERE bill_id = :id")
+    suspend fun getBillById(id: Int): BillEntity?
 
     @Query("""
         SELECT bills.*, locations.name as location_name 
@@ -139,6 +157,15 @@ interface FarmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLaborLog(log: LaborLogEntity): Long
 
+    @Update
+    suspend fun updateLaborLog(log: LaborLogEntity)
+
+    @Delete
+    suspend fun deleteLaborLog(log: LaborLogEntity)
+
+    @Query("SELECT * FROM labor_logs WHERE log_id = :id")
+    suspend fun getLaborLogById(id: Int): LaborLogEntity?
+
     @Query("""
         SELECT 
             l.log_id as id,
@@ -160,15 +187,18 @@ interface FarmDao {
     @Query("DELETE FROM labor_logs WHERE employee_id = :employeeId")
     suspend fun deleteLaborLogsForEmployee(employeeId: Int)
 
-    @Delete
-    suspend fun deleteLaborLog(log: LaborLogEntity)
-
-    @Query("SELECT * FROM labor_logs WHERE log_id = :id")
-    suspend fun getLaborLogById(id: Int): LaborLogEntity?
-
     // --- Maintenance Logs ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMaintenanceLog(log: MaintenanceLogEntity): Long
+
+    @Update
+    suspend fun updateMaintenanceLog(log: MaintenanceLogEntity)
+
+    @Delete
+    suspend fun deleteMaintenanceLog(log: MaintenanceLogEntity)
+
+    @Query("SELECT * FROM maintenance_logs WHERE log_id = :id")
+    suspend fun getMaintenanceLogById(id: Int): MaintenanceLogEntity?
 
     @Query("""
         SELECT 
@@ -191,12 +221,6 @@ interface FarmDao {
 
     @Query("DELETE FROM maintenance_logs WHERE machine_id = :machineId")
     suspend fun deleteMaintenanceLogsForMachine(machineId: Int)
-
-    @Delete
-    suspend fun deleteMaintenanceLog(log: MaintenanceLogEntity)
-
-    @Query("SELECT * FROM maintenance_logs WHERE log_id = :id")
-    suspend fun getMaintenanceLogById(id: Int): MaintenanceLogEntity?
 
     // ================== ANALYTICS QUERIES ==================
 

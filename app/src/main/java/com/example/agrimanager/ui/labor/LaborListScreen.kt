@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import java.util.*
 fun LaborListScreen(
     onNavigateBack: () -> Unit,
     onAddLaborClick: () -> Unit,
+    onEditLaborClick: (Int) -> Unit,
     viewModel: LaborViewModel = hiltViewModel()
 ) {
     val laborLogs by viewModel.laborLogs.collectAsState()
@@ -72,6 +74,7 @@ fun LaborListScreen(
                 items(laborLogs) { log ->
                     LaborLogCard(
                         log = log,
+                        onEdit = { onEditLaborClick(log.id) },
                         onDelete = { viewModel.deleteLaborLog(log.id) }
                     )
                 }
@@ -83,6 +86,7 @@ fun LaborListScreen(
 @Composable
 fun LaborLogCard(
     log: LaborLogWithEmployee,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -153,13 +157,22 @@ fun LaborLogCard(
                 }
             }
             
-            // Delete button
-            IconButton(onClick = { showDeleteDialog = true }) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            // Action buttons
+            Row {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }

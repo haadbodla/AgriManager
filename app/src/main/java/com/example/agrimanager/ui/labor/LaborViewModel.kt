@@ -24,6 +24,8 @@ class LaborViewModel @Inject constructor(
     val employees: StateFlow<List<EmployeeEntity>> = repository.getAllEmployees()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    suspend fun getLaborLogById(id: Int) = repository.getLaborLogById(id)
+
     fun addLaborLog(
         employeeId: Int,
         laborCount: Int,
@@ -38,6 +40,26 @@ class LaborViewModel @Inject constructor(
                 totalAmount = totalAmount
             )
             repository.addLaborLog(log)
+        }
+    }
+
+    fun updateLaborLog(
+        id: Int,
+        employeeId: Int,
+        laborCount: Int,
+        workType: String,
+        totalAmount: Double
+    ) {
+        viewModelScope.launch {
+            val log = LaborLogEntity(
+                id = id,
+                employeeId = employeeId,
+                laborCount = laborCount,
+                workType = workType,
+                totalAmount = totalAmount,
+                date = System.currentTimeMillis()
+            )
+            repository.updateLaborLog(log)
         }
     }
 

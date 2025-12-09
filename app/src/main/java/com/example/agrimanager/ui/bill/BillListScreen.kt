@@ -7,6 +7,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,12 +28,13 @@ import java.util.Locale
 @Composable
 fun BillListScreen(
     onBackClick: () -> Unit,
-    onManageLocationsClick: () -> Unit, // <--- NEW PARAMETER
+    onManageLocationsClick: () -> Unit,
     viewModel: BillViewModel = hiltViewModel()
 ) {
     val bills by viewModel.allBills.collectAsState()
     val locations by viewModel.locations.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
+    var editingBill by remember { mutableStateOf<BillWithLocation?>(null) }
 
     Scaffold(
         topBar = {
@@ -39,7 +42,6 @@ fun BillListScreen(
                 title = { Text("All Electricity Bills") },
                 navigationIcon = { IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Back") } },
                 actions = {
-                    // NEW: Button to go to Location Manager
                     IconButton(onClick = onManageLocationsClick) {
                         Icon(Icons.Default.LocationOn, contentDescription = "Manage Locations")
                     }
@@ -47,7 +49,12 @@ fun BillListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) { Icon(Icons.Default.Add, "Add Bill") }
+            FloatingActionButton(onClick = { 
+                editingBill = null
+                showDialog = true 
+            }) { 
+                Icon(Icons.Default.Add, "Add Bill") 
+            }
         }
     ) { paddingValues ->
         if (bills.isEmpty()) {
@@ -55,59 +62,135 @@ fun BillListScreen(
                 Text("No bills yet.")
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(bills) { item -> BillCard(item) }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp), 
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(bills) { item ->
+                    BillCard(
+                        item = item,
+                        onEdit = {
+                            editingBill = item
+                            showDialog = true
+                        },
+                        onDelete = { viewModel.deleteBill(item.bill.id, item.bill.locationId) }
+                    )
+                }
             }
         }
 
         if (showDialog) {
             AddBillDialog(
                 locations = locations,
-                onDismiss = { showDialog = false },
-                onConfirm = { locId, m, a ->
-                    viewModel.addBill(locId, m, a)
+                editingBill = editingBill,
+                onDismiss = { 
                     showDialog = false
+                    editingBill = null
+                },
+                onConfirm = { locId, m, a ->
+                    if (editingBill != null) {
+                        viewModel.updateBill(editingBill!!.bill.id, locId, m, a)
+                    } else {
+                        viewModel.addBill(locId, m, a)
+                    }
+                    showDialog = false
+                    editingBill = null
                 }
             )
         }
     }
 }
 
-// ... BillCard and AddBillDialog remain exactly the same as before ...
 @Composable
-fun BillCard(item: BillWithLocation) {
+fun BillCard(
+    item: BillWithLocation,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     Card(elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(item.locationName, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text(item.bill.billingMonth, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Text(SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(item.bill.dateAdded)), style = MaterialTheme.typography.bodySmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(item.locationName, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text(item.bill.billingMonth, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text(SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(item.bill.dateAdded)), style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text("Rs. ${item.bill.amount}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
+                    }
                 }
-                Text("Rs. ${item.bill.amount}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
+                
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, "Edit", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Bill") },
+            text = { Text("Are you sure you want to delete this bill?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddBillDialog(locations: List<LocationEntity>, onDismiss: () -> Unit, onConfirm: (Int, String, String) -> Unit) {
-    var month by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
+fun AddBillDialog(
+    locations: List<LocationEntity>, 
+    editingBill: BillWithLocation? = null,
+    onDismiss: () -> Unit, 
+    onConfirm: (Int, String, String) -> Unit
+) {
+    var month by remember(editingBill) { mutableStateOf(editingBill?.bill?.billingMonth ?: "") }
+    var amount by remember(editingBill) { mutableStateOf(editingBill?.bill?.amount?.toString() ?: "") }
     var expanded by remember { mutableStateOf(false) }
-    var selectedLocation by remember { mutableStateOf<LocationEntity?>(null) }
+    var selectedLocation by remember(editingBill) { 
+        mutableStateOf<LocationEntity?>(
+            locations.find { it.id == editingBill?.bill?.locationId }
+        ) 
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Bill") },
+        title = { Text(if (editingBill != null) "Edit Bill" else "Add Bill") },
         text = {
             Column {
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                     OutlinedTextField(
                         value = selectedLocation?.name ?: "Select Location",
-                        onValueChange = {}, readOnly = true,
+                        onValueChange = {}, 
+                        readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
@@ -121,12 +204,30 @@ fun AddBillDialog(locations: List<LocationEntity>, onDismiss: () -> Unit, onConf
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(value = month, onValueChange = { month = it }, label = { Text("Month") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = month, 
+                    onValueChange = { month = it }, 
+                    label = { Text("Month") }, 
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = amount, 
+                    onValueChange = { amount = it }, 
+                    label = { Text("Amount") }, 
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), 
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
-        confirmButton = { Button(onClick = { if (selectedLocation != null) onConfirm(selectedLocation!!.id, month, amount) }, enabled = selectedLocation != null && month.isNotBlank() && amount.isNotBlank()) { Text("Save") } },
+        confirmButton = { 
+            Button(
+                onClick = { if (selectedLocation != null) onConfirm(selectedLocation!!.id, month, amount) }, 
+                enabled = selectedLocation != null && month.isNotBlank() && amount.isNotBlank()
+            ) { 
+                Text(if (editingBill != null) "Update" else "Save") 
+            } 
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }

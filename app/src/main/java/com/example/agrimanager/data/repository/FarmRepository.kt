@@ -137,6 +137,27 @@ class FarmRepository @Inject constructor(
         scheduleSync("fuel_logs", id.toString(), data)
     }
 
+    suspend fun updateFuelLog(log: FuelLogEntity) {
+        dao.updateFuelLog(log)
+        val data = mapOf(
+            "id" to log.id,
+            "machineId" to log.machineId,
+            "date" to log.date,
+            "liters" to log.liters,
+            "rate" to log.rate,
+            "totalCost" to log.totalCost,
+            "hourMeterReading" to log.hourMeterReading
+        )
+        scheduleSync("fuel_logs", log.id.toString(), data)
+    }
+
+    suspend fun deleteFuelLog(log: FuelLogEntity) {
+        dao.deleteFuelLog(log)
+        scheduleSync("fuel_logs", log.id.toString(), emptyMap(), isDelete = true)
+    }
+
+    suspend fun getFuelLogById(id: Int): FuelLogEntity? = dao.getFuelLogById(id)
+
 
     // ================== LOCATION OPERATIONS ==================
 
@@ -188,6 +209,26 @@ class FarmRepository @Inject constructor(
         )
         scheduleSync("bills", id.toString(), data)
     }
+
+    suspend fun updateBill(bill: BillEntity) {
+        dao.updateBill(bill)
+        val data = mapOf(
+            "id" to bill.id,
+            "locationId" to bill.locationId,
+            "billingMonth" to bill.billingMonth,
+            "amount" to bill.amount,
+            "dateAdded" to bill.dateAdded
+        )
+        scheduleSync("bills", bill.id.toString(), data)
+    }
+
+    suspend fun deleteBill(bill: BillEntity) {
+        dao.deleteBill(bill)
+        scheduleSync("bills", bill.id.toString(), emptyMap(), isDelete = true)
+    }
+
+    suspend fun getBillById(id: Int): BillEntity? = dao.getBillById(id)
+
     // ================== EMPLOYEE OPERATIONS ==================
     suspend fun insertEmployee(employee: EmployeeEntity) {
         val id = dao.insertEmployee(employee)
@@ -385,10 +426,25 @@ class FarmRepository @Inject constructor(
         scheduleSync("labor_logs", id.toString(), data)
     }
     
+    suspend fun updateLaborLog(log: LaborLogEntity) {
+        dao.updateLaborLog(log)
+        val data = mapOf(
+            "id" to log.id,
+            "employeeId" to log.employeeId,
+            "laborCount" to log.laborCount,
+            "workType" to log.workType,
+            "totalAmount" to log.totalAmount,
+            "date" to log.date
+        )
+        scheduleSync("labor_logs", log.id.toString(), data)
+    }
+    
     suspend fun deleteLaborLog(log: LaborLogEntity) {
         dao.deleteLaborLog(log)
         scheduleSync("labor_logs", log.id.toString(), emptyMap(), isDelete = true)
     }
+
+    suspend fun getLaborLogById(id: Int): LaborLogEntity? = dao.getLaborLogById(id)
 
 
     // ================== MAINTENANCE LOG OPERATIONS ==================
@@ -409,10 +465,26 @@ class FarmRepository @Inject constructor(
         scheduleSync("maintenance_logs", id.toString(), data)
     }
     
+    suspend fun updateMaintenanceLog(log: MaintenanceLogEntity) {
+        dao.updateMaintenanceLog(log)
+        val data = mapOf(
+            "id" to log.id,
+            "machineId" to log.machineId,
+            "tag" to log.tag,
+            "cost" to log.cost,
+            "mechanicName" to log.mechanicName,
+            "description" to log.description,
+            "date" to log.date
+        )
+        scheduleSync("maintenance_logs", log.id.toString(), data)
+    }
+    
     suspend fun deleteMaintenanceLog(log: MaintenanceLogEntity) {
         dao.deleteMaintenanceLog(log)
         scheduleSync("maintenance_logs", log.id.toString(), emptyMap(), isDelete = true)
     }
+
+    suspend fun getMaintenanceLogById(id: Int): MaintenanceLogEntity? = dao.getMaintenanceLogById(id)
 
 
     // ================== ANALYTICS OPERATIONS ==================

@@ -138,7 +138,8 @@ class MainActivity : ComponentActivity() {
                 composable("labor_list") {
                     LaborListScreen(
                         onNavigateBack = { navController.popBackStack() },
-                        onAddLaborClick = { navController.navigate("add_labor_log") }
+                        onAddLaborClick = { navController.navigate("add_labor_log") },
+                        onEditLaborClick = { logId -> navController.navigate("add_labor_log/$logId") }
                     )
                 }
 
@@ -146,15 +147,38 @@ class MainActivity : ComponentActivity() {
                     AddLaborLogScreen(onNavigateBack = { navController.popBackStack() })
                 }
 
+                composable(
+                    route = "add_labor_log/{logId}",
+                    arguments = listOf(navArgument("logId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val logId = backStackEntry.arguments?.getInt("logId")
+                    AddLaborLogScreen(
+                        logId = logId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
                 composable("maintenance_list") {
                     MaintenanceListScreen(
                         onNavigateBack = { navController.popBackStack() },
-                        onAddMaintenanceClick = { navController.navigate("add_maintenance_log") }
+                        onAddMaintenanceClick = { navController.navigate("add_maintenance_log") },
+                        onEditMaintenanceClick = { logId -> navController.navigate("add_maintenance_log/$logId") }
                     )
                 }
 
                 composable("add_maintenance_log") {
                     AddMaintenanceLogScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                composable(
+                    route = "add_maintenance_log/{logId}",
+                    arguments = listOf(navArgument("logId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val logId = backStackEntry.arguments?.getInt("logId")
+                    AddMaintenanceLogScreen(
+                        logId = logId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
 
                 composable("analytics") {

@@ -14,23 +14,34 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddMaintenanceLogScreen(
+    logId: Int? = null,
     onNavigateBack: () -> Unit,
     viewModel: MaintenanceViewModel = hiltViewModel()
 ) {
     val machines by viewModel.machines.collectAsState()
     
-    var selectedMachineId by remember { mutableStateOf<Int?>(null) }
-    var selectedTag by remember { mutableStateOf("") }
-    var cost by remember { mutableStateOf("") }
-    var mechanicName by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+    // Load existing log if editing
+    var existingLog by remember { mutableStateOf<com.example.agrimanager.data.local.MaintenanceLogEntity?>(null) }
+    
+    LaunchedEffect(logId) {
+        if (logId != null && logId > 0) {
+            existingLog = viewModel.getMaintenanceLogById(logId)
+        }
+    }
+    
+    var selectedMachineId by remember(existingLog) { mutableStateOf(existingLog?.machineId) }
+    var selectedTag by remember(existingLog) { mutableStateOf(existingLog?.tag ?: "") }
+    var cost by remember(existingLog) { mutableStateOf(existingLog?.cost?.toString() ?: "") }
+    var mechanicName by remember(existingLog) { mutableStateOf(existingLog?.mechanicName ?: "") }
+    var description by remember(existingLog) { mutableStateOf(existingLog?.description ?: "") }
     
     val tags = listOf("Oil Change", "Tyre", "Battery", "Engine", "Other")
+    val isEditMode = logId != null && logId > 0
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Maintenance Log") },
+                title = { Text(if (isEditMode) "Edit Maintenance Log" else "Add Maintenance Log") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -149,7 +160,11 @@ fun AddMaintenanceLogScreen(
                     
                     if (machId != null && costValue != null && selectedTag.isNotEmpty() && 
                         mechanicName.isNotEmpty() && description.isNotEmpty()) {
-                        viewModel.addMaintenanceLog(machId, selectedTag, costValue, mechanicName, description)
+                        if (isEditMode) {
+                            viewModel.updateMaintenanceLog(logId!!, machId, selectedTag, costValue, mechanicName, description)
+                        } else {
+                            viewModel.addMaintenanceLog(machId, selectedTag, costValue, mechanicName, description)
+                        }
                         onNavigateBack()
                     }
                 },
@@ -160,7 +175,7 @@ fun AddMaintenanceLogScreen(
                          mechanicName.isNotEmpty() && 
                          description.isNotEmpty()
             ) {
-                Text("Save Log")
+                Text(if (isEditMode) "Update Log" else "Save Log")
             }
         }
     }

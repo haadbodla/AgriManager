@@ -45,4 +45,34 @@ class BillViewModel @Inject constructor(
             )
         }
     }
+
+    fun updateBill(id: Int, locationId: Int, month: String, amount: String) {
+        val amountVal = amount.toDoubleOrNull() ?: return
+        if (month.isBlank()) return
+
+        viewModelScope.launch {
+            repository.updateBill(
+                BillEntity(
+                    id = id,
+                    locationId = locationId,
+                    billingMonth = month,
+                    amount = amountVal,
+                    dateAdded = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    fun deleteBill(billId: Int, locationId: Int) {
+        viewModelScope.launch {
+            repository.deleteBill(
+                BillEntity(
+                    id = billId,
+                    locationId = locationId,
+                    billingMonth = "",
+                    amount = 0.0
+                )
+            )
+        }
+    }
 }

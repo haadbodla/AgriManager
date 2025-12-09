@@ -24,6 +24,8 @@ class MaintenanceViewModel @Inject constructor(
     val machines: StateFlow<List<MachineEntity>> = repository.getAllMachines()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    suspend fun getMaintenanceLogById(id: Int) = repository.getMaintenanceLogById(id)
+
     fun addMaintenanceLog(
         machineId: Int,
         tag: String,
@@ -40,6 +42,28 @@ class MaintenanceViewModel @Inject constructor(
                 description = description
             )
             repository.addMaintenanceLog(log)
+        }
+    }
+
+    fun updateMaintenanceLog(
+        id: Int,
+        machineId: Int,
+        tag: String,
+        cost: Double,
+        mechanicName: String,
+        description: String
+    ) {
+        viewModelScope.launch {
+            val log = MaintenanceLogEntity(
+                id = id,
+                machineId = machineId,
+                tag = tag,
+                cost = cost,
+                mechanicName = mechanicName,
+                description = description,
+                date = System.currentTimeMillis()
+            )
+            repository.updateMaintenanceLog(log)
         }
     }
 
