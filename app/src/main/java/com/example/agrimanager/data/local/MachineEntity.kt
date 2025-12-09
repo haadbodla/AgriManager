@@ -13,9 +13,6 @@ data class MachineEntity(
     @ColumnInfo(name = "name")
     val name: String,
 
-    @ColumnInfo(name = "service_interval_hours")
-    val serviceIntervalHours: Int, // e.g., 250 hours
-
-    @ColumnInfo(name = "last_service_reading")
-    val lastServiceReading: Int // e.g., 1200 hours
+    @ColumnInfo(name = "date_added")
+    val dateAdded: Long = System.currentTimeMillis()
 )

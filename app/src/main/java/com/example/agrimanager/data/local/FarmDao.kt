@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -30,6 +31,12 @@ interface FarmDao {
     @Query("SELECT * FROM transactions WHERE employee_id = :employeeId")
     fun getTransactionsForEmployee(employeeId: Int): Flow<List<TransactionEntity>>
 
+    @Query("SELECT * FROM transactions WHERE employee_id = :employeeId")
+    suspend fun getTransactionsForEmployeeList(employeeId: Int): List<TransactionEntity>
+
+    @Query("DELETE FROM transactions WHERE employee_id = :employeeId")
+    suspend fun deleteTransactionsForEmployee(employeeId: Int)
+
     @Query("SELECT SUM(amount) FROM transactions WHERE employee_id = :employeeId AND type = 'DEBIT'")
     fun getTotalAdvances(employeeId: Int): Flow<Double?>
 
@@ -39,6 +46,9 @@ interface FarmDao {
 
     @Delete
     suspend fun deleteMachine(machine: MachineEntity)
+
+    @Update
+    suspend fun updateMachine(machine: MachineEntity)
 
     @Query("SELECT * FROM machines ORDER BY name ASC")
     fun getAllMachines(): Flow<List<MachineEntity>>
@@ -52,6 +62,12 @@ interface FarmDao {
 
     @Query("SELECT * FROM fuel_logs WHERE machine_id = :machineId ORDER BY date DESC")
     fun getFuelLogsForMachine(machineId: Int): Flow<List<FuelLogEntity>>
+
+    @Query("SELECT * FROM fuel_logs WHERE machine_id = :machineId")
+    suspend fun getFuelLogsForMachineList(machineId: Int): List<FuelLogEntity>
+
+    @Query("DELETE FROM fuel_logs WHERE machine_id = :machineId")
+    suspend fun deleteFuelLogsForMachine(machineId: Int)
 
     @Query("SELECT SUM(total_cost) FROM fuel_logs WHERE machine_id = :machineId")
     fun getTotalCostForMachine(machineId: Int): Flow<Double?>
@@ -81,6 +97,12 @@ interface FarmDao {
     @Query("SELECT * FROM bills WHERE location_id = :locationId ORDER BY date_added DESC")
     fun getBillsForLocation(locationId: Int): Flow<List<BillEntity>>
 
+    @Query("SELECT * FROM bills WHERE location_id = :locationId")
+    suspend fun getBillsForLocationList(locationId: Int): List<BillEntity>
+
+    @Query("DELETE FROM bills WHERE location_id = :locationId")
+    suspend fun deleteBillsForLocation(locationId: Int)
+
     @Query("SELECT SUM(amount) FROM bills WHERE location_id = :locationId")
     fun getTotalBillForLocation(locationId: Int): Flow<Double?>
 
@@ -107,6 +129,12 @@ interface FarmDao {
     @Query("SELECT * FROM stock_transactions WHERE item_id = :itemId ORDER BY date DESC")
     fun getTransactionsForItem(itemId: Int): Flow<List<StockTransactionEntity>>
 
+    @Query("SELECT * FROM stock_transactions WHERE item_id = :itemId")
+    suspend fun getStockTransactionsForItemList(itemId: Int): List<StockTransactionEntity>
+
+    @Query("DELETE FROM stock_transactions WHERE item_id = :itemId")
+    suspend fun deleteStockTransactionsForItem(itemId: Int)
+
     // --- Labor Logs ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLaborLog(log: LaborLogEntity): Long
@@ -125,6 +153,12 @@ interface FarmDao {
         ORDER BY l.date DESC
     """)
     fun getAllLaborLogsWithEmployee(): Flow<List<LaborLogWithEmployee>>
+
+    @Query("SELECT * FROM labor_logs WHERE employee_id = :employeeId")
+    suspend fun getLaborLogsForEmployeeList(employeeId: Int): List<LaborLogEntity>
+
+    @Query("DELETE FROM labor_logs WHERE employee_id = :employeeId")
+    suspend fun deleteLaborLogsForEmployee(employeeId: Int)
 
     @Delete
     suspend fun deleteLaborLog(log: LaborLogEntity)
@@ -151,6 +185,12 @@ interface FarmDao {
         ORDER BY m.date DESC
     """)
     fun getAllMaintenanceLogsWithMachine(): Flow<List<MaintenanceLogWithMachine>>
+
+    @Query("SELECT * FROM maintenance_logs WHERE machine_id = :machineId")
+    suspend fun getMaintenanceLogsForMachineList(machineId: Int): List<MaintenanceLogEntity>
+
+    @Query("DELETE FROM maintenance_logs WHERE machine_id = :machineId")
+    suspend fun deleteMaintenanceLogsForMachine(machineId: Int)
 
     @Delete
     suspend fun deleteMaintenanceLog(log: MaintenanceLogEntity)

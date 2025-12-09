@@ -19,17 +19,25 @@ class AuthRepository @Inject constructor(
     }
 
     // Sign In existing user
-    suspend fun signIn(email: String, password: String): Result<Boolean> = try {
-        auth.signInWithEmailAndPassword(email, password).await()
-        
-        // NEW: Download data from Firestore if local database is empty
-        if (farmRepository.isLocalDatabaseEmpty()) {
-            farmRepository.downloadAllDataFromFirestore()
+    suspend fun signIn(email: String, password: String): Result<Boolean> {
+        return try {
+            auth.signInWithEmailAndPassword(email, password).await()
+            
+            // NEW: Download data from Firestore if local database is empty
+            val isEmpty = farmRepository.isLocalDatabaseEmpty()
+            
+            if (isEmpty) {
+                val downloadResult = farmRepository.downloadAllDataFromFirestore()
+                
+                if (downloadResult.isFailure) {
+                    return Result.failure(downloadResult.exceptionOrNull() ?: Exception("Download failed"))
+                }
+            }
+            
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
-        
-        Result.success(true)
-    } catch (e: Exception) {
-        Result.failure(e)
     }
 
     // Sign Out

@@ -25,20 +25,31 @@ class MachineViewModel @Inject constructor(
         )
 
     // 2. Function to Add a Machine
-    fun addMachine(name: String, serviceInterval: String, currentReading: String) {
+    fun addMachine(name: String) {
         if (name.isBlank()) return // Simple validation
 
         viewModelScope.launch {
             val machine = MachineEntity(
-                name = name,
-                serviceIntervalHours = serviceInterval.toIntOrNull() ?: 250,
-                lastServiceReading = currentReading.toIntOrNull() ?: 0
+                name = name
             )
             repository.insertMachine(machine)
         }
     }
 
-    // 3. Function to Delete
+    // 3. Function to Update a Machine
+    fun updateMachine(machine: MachineEntity, newName: String) {
+        if (newName.isBlank()) return
+
+        viewModelScope.launch {
+            val updatedMachine = machine.copy(
+                name = newName,
+                dateAdded = System.currentTimeMillis()
+            )
+            repository.updateMachine(updatedMachine)
+        }
+    }
+
+    // 4. Function to Delete
     fun deleteMachine(machine: MachineEntity) {
         viewModelScope.launch {
             repository.deleteMachine(machine)

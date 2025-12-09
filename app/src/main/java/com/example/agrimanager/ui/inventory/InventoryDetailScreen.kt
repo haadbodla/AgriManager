@@ -189,7 +189,7 @@ fun HistoryItem(model: StockHistoryUiModel, unit: String) {
                     Text("By: ${model.employeeName}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 }
                 if (isIn && tx.totalCost != null) {
-                    Text("Cost: ₹${tx.totalCost}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Text("Cost: Rs ${tx.totalCost}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 }
             }
         },

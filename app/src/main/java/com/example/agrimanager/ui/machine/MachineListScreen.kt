@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.MachineEntity
 
-// 1. THE MAIN SCREEN
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MachineListScreen(
@@ -27,7 +27,11 @@ fun MachineListScreen(
     onMachineClick: (Int) -> Unit
 ) {
     val machines by viewModel.machineList.collectAsState()
-    var showDialog by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var machineToEdit by remember { mutableStateOf<MachineEntity?>(null) }
+    var machineToDelete by remember { mutableStateOf<MachineEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -44,7 +48,7 @@ fun MachineListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) {
+            FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Machine")
             }
         }
@@ -65,19 +69,56 @@ fun MachineListScreen(
                 items(machines) { machine ->
                     MachineItem(
                         machine = machine,
-                        onDelete = { viewModel.deleteMachine(machine) },
-                        onClick = { onMachineClick(machine.id) } // <--- NEW: Pass the click event
+                        onDelete = {
+                            machineToDelete = machine
+                            showDeleteDialog = true
+                        },
+                        onEdit = {
+                            machineToEdit = machine
+                            showEditDialog = true
+                        },
+                        onClick = { onMachineClick(machine.id) }
                     )
                 }
             }
         }
 
-        if (showDialog) {
+        if (showAddDialog) {
             AddMachineDialog(
-                onDismiss = { showDialog = false },
-                onConfirm = { name, interval, reading ->
-                    viewModel.addMachine(name, interval, reading)
-                    showDialog = false
+                onDismiss = { showAddDialog = false },
+                onConfirm = { name ->
+                    viewModel.addMachine(name)
+                    showAddDialog = false
+                }
+            )
+        }
+
+        if (showEditDialog && machineToEdit != null) {
+            EditMachineDialog(
+                machine = machineToEdit!!,
+                onDismiss = {
+                    showEditDialog = false
+                    machineToEdit = null
+                },
+                onConfirm = { newName ->
+                    viewModel.updateMachine(machineToEdit!!, newName)
+                    showEditDialog = false
+                    machineToEdit = null
+                }
+            )
+        }
+
+        if (showDeleteDialog && machineToDelete != null) {
+            DeleteMachineConfirmationDialog(
+                machineName = machineToDelete!!.name,
+                onConfirm = {
+                    viewModel.deleteMachine(machineToDelete!!)
+                    showDeleteDialog = false
+                    machineToDelete = null
+                },
+                onDismiss = {
+                    showDeleteDialog = false
+                    machineToDelete = null
                 }
             )
         }
@@ -90,7 +131,8 @@ fun MachineListScreen(
 fun MachineItem(
     machine: MachineEntity,
     onDelete: () -> Unit,
-    onClick: () -> Unit // <--- NEW: Receive the click event
+    onEdit: () -> Unit,
+    onClick: () -> Unit
 ) {
     Card(
         onClick = onClick, // <--- NEW: Enable clicking the card
@@ -103,19 +145,23 @@ fun MachineItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = machine.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Service Interval: ${machine.serviceIntervalHours} hrs",
-                    style = MaterialTheme.typography.bodySmall
+                    text = formatMachineDate(machine.dateAdded),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = "Current Reading: ${machine.lastServiceReading} hrs",
-                    style = MaterialTheme.typography.bodySmall
+            }
+            IconButton(onClick = onEdit) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
             IconButton(onClick = onDelete) {
@@ -125,45 +171,130 @@ fun MachineItem(
     }
 }
 
-// 3. THE ADD DIALOG (Unchanged)
+// Helper function to format date
+private fun formatMachineDate(timestamp: Long): String {
+    val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
+    val currentTime = System.currentTimeMillis()
+    val daysDiff = (currentTime - timestamp) / (1000 * 60 * 60 * 24)
+    
+    return if (daysDiff < 1) {
+        "Added: ${sdf.format(java.util.Date(timestamp))}"
+    } else {
+        "Modified: ${sdf.format(java.util.Date(timestamp))}"
+    }
+}
+
+// 3. THE ADD DIALOG
 @Composable
 fun AddMachineDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String) -> Unit
+    onConfirm: (String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var interval by remember { mutableStateOf("") }
-    var reading by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Machine") },
         text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Machine Name") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(name) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+// 4. THE EDIT DIALOG
+@Composable
+fun EditMachineDialog(
+    machine: MachineEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember { mutableStateOf(machine.name) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Machine") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Machine Name") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(name) },
+                enabled = name.isNotBlank() && name != machine.name
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+// 5. DELETE CONFIRMATION DIALOG
+@Composable
+fun DeleteMachineConfirmationDialog(
+    machineName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text("Delete Machine?") },
+        text = {
             Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name (e.g. Tractor)") }
-                )
+                Text("Are you sure you want to delete \"$machineName\"?")
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = interval,
-                    onValueChange = { interval = it },
-                    label = { Text("Service Interval (Hours)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                Text(
+                    "This will also permanently delete:",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
                 )
+                Text("• All fuel logs")
+                Text("• All maintenance records")
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = reading,
-                    onValueChange = { reading = it },
-                    label = { Text("Current Reading (Hours)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                Text(
+                    "This action cannot be undone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
                 )
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(name, interval, reading) }) {
-                Text("Add")
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Delete")
             }
         },
         dismissButton = {

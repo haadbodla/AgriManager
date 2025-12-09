@@ -145,7 +145,7 @@ fun LaborLogCard(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "Amount: ₹${String.format("%.2f", log.totalAmount)}",
+                        text = "Amount: Rs ${String.format("%.2f", log.totalAmount)}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary

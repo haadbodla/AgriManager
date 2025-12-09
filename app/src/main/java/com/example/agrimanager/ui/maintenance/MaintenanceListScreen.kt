@@ -138,7 +138,7 @@ fun MaintenanceLogCard(
                 
                 // Cost
                 Text(
-                    text = "Cost: ₹${String.format("%.2f", log.cost)}",
+                    text = "Cost: Rs ${String.format("%.2f", log.cost)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary

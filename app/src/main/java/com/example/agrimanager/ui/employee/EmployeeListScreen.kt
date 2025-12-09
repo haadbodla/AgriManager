@@ -28,6 +28,8 @@ fun EmployeeListScreen(
 ) {
     val employees by viewModel.employeeList.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var employeeToDelete by remember { mutableStateOf<EmployeeEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -70,7 +72,10 @@ fun EmployeeListScreen(
                     EmployeeCard(
                         employee = employee,
                         onClick = { navController.navigate("salary/${employee.id}") },
-                        onDelete = { viewModel.deleteEmployee(employee) }
+                        onDelete = {
+                            employeeToDelete = employee
+                            showDeleteDialog = true
+                        }
                     )
                 }
             }
@@ -81,6 +86,21 @@ fun EmployeeListScreen(
                 onSave = { name, salary ->
                     viewModel.addEmployee(name, salary)
                     showAddDialog = false
+                }
+            )
+        }
+
+        if (showDeleteDialog && employeeToDelete != null) {
+            DeleteEmployeeConfirmationDialog(
+                employeeName = employeeToDelete!!.name,
+                onConfirm = {
+                    viewModel.deleteEmployee(employeeToDelete!!)
+                    showDeleteDialog = false
+                    employeeToDelete = null
+                },
+                onDismiss = {
+                    showDeleteDialog = false
+                    employeeToDelete = null
                 }
             )
         }
@@ -112,7 +132,7 @@ private fun EmployeeCard(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Base Salary: ₹${employee.baseSalary}",
+                    text = "Base Salary: Rs ${employee.baseSalary}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -162,6 +182,57 @@ private fun AddEmployeeDialog(
                 enabled = isValid
             ) {
                 Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun DeleteEmployeeConfirmationDialog(
+    employeeName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text("Delete Employee?") },
+        text = {
+            Column {
+                Text("Are you sure you want to delete \"$employeeName\"?")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "This will also permanently delete:",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Text("• All salary transactions (advances & payments)")
+                Text("• All labor logs")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "This action cannot be undone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Delete")
             }
         },
         dismissButton = {

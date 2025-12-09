@@ -91,7 +91,7 @@ fun SalaryScreen(
                     val isPositive = bal >= 0
 
                     Text(
-                        text = if(isPositive) "₹${bal.toInt()}" else "- ₹${Math.abs(bal.toInt())}",
+                        text = if(isPositive) "Rs ${bal.toInt()}" else "- Rs ${Math.abs(bal.toInt())}",
                         style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (isPositive) Color(0xFF2E7D32) else Color(0xFFC62828)
@@ -213,7 +213,7 @@ fun TransactionItem(transaction: TransactionEntity) {
         },
         trailingContent = {
             Text(
-                text = "₹${transaction.amount.toInt()}",
+                text = "Rs ${transaction.amount.toInt()}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = if (isCredit) Color(0xFF2E7D32) else Color(0xFFC62828)

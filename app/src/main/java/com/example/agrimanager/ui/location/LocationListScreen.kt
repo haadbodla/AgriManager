@@ -24,6 +24,8 @@ fun LocationListScreen(
 ) {
     val locations by viewModel.locationList.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var locationToDelete by remember { mutableStateOf<LocationEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -70,7 +72,10 @@ fun LocationListScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            IconButton(onClick = { viewModel.deleteLocation(location) }) {
+                            IconButton(onClick = {
+                                locationToDelete = location
+                                showDeleteDialog = true
+                            }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                             }
                         }
@@ -86,6 +91,21 @@ fun LocationListScreen(
                 onConfirm = { name ->
                     viewModel.addLocation(name)
                     showDialog = false
+                }
+            )
+        }
+
+        if (showDeleteDialog && locationToDelete != null) {
+            DeleteLocationConfirmationDialog(
+                locationName = locationToDelete!!.name,
+                onConfirm = {
+                    viewModel.deleteLocation(locationToDelete!!)
+                    showDeleteDialog = false
+                    locationToDelete = null
+                },
+                onDismiss = {
+                    showDeleteDialog = false
+                    locationToDelete = null
                 }
             )
         }
@@ -122,6 +142,56 @@ fun AddLocationDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
+        }
+    )
+}
+
+@Composable
+fun DeleteLocationConfirmationDialog(
+    locationName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text("Delete Location?") },
+        text = {
+            Column {
+                Text("Are you sure you want to delete \"$locationName\"?")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "This will also permanently delete:",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Text("• All bills for this location")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "This action cannot be undone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }

@@ -75,14 +75,42 @@ class FarmRepository @Inject constructor(
         val data = mapOf(
             "id" to id.toInt(),
             "name" to machine.name,
-            "serviceIntervalHours" to machine.serviceIntervalHours,
-            "lastServiceReading" to machine.lastServiceReading
+            "dateAdded" to machine.dateAdded
         )
         scheduleSync("machines", id.toString(), data)
     }
 
+    suspend fun updateMachine(machine: MachineEntity) {
+        dao.updateMachine(machine)
+        val data = mapOf(
+            "id" to machine.id,
+            "name" to machine.name,
+            "dateAdded" to machine.dateAdded
+        )
+        scheduleSync("machines", machine.id.toString(), data)
+    }
+
     suspend fun deleteMachine(machine: MachineEntity) {
+        // Get all child records before deleting
+        val fuelLogs = dao.getFuelLogsForMachineList(machine.id)
+        val maintenanceLogs = dao.getMaintenanceLogsForMachineList(machine.id)
+        
+        // Delete children from Room
+        dao.deleteFuelLogsForMachine(machine.id)
+        dao.deleteMaintenanceLogsForMachine(machine.id)
+        
+        // Delete parent from Room
         dao.deleteMachine(machine)
+        
+        // Delete children from Firestore
+        fuelLogs.forEach { log ->
+            scheduleSync("fuel_logs", log.id.toString(), emptyMap(), isDelete = true)
+        }
+        maintenanceLogs.forEach { log ->
+            scheduleSync("maintenance_logs", log.id.toString(), emptyMap(), isDelete = true)
+        }
+        
+        // Delete parent from Firestore
         scheduleSync("machines", machine.id.toString(), emptyMap(), isDelete = true)
     }
 
@@ -124,7 +152,21 @@ class FarmRepository @Inject constructor(
     }
 
     suspend fun deleteLocation(location: LocationEntity) {
+        // Get all child records
+        val bills = dao.getBillsForLocationList(location.id)
+        
+        // Delete children from Room
+        dao.deleteBillsForLocation(location.id)
+        
+        // Delete parent from Room
         dao.deleteLocation(location)
+        
+        // Delete children from Firestore
+        bills.forEach { bill ->
+            scheduleSync("bills", bill.id.toString(), emptyMap(), isDelete = true)
+        }
+        
+        // Delete parent from Firestore
         scheduleSync("locations", location.id.toString(), emptyMap(), isDelete = true)
     }
 
@@ -157,7 +199,26 @@ class FarmRepository @Inject constructor(
         scheduleSync("employees", id.toString(), data)
     }
     suspend fun deleteEmployee(employee: EmployeeEntity) {
+        // Get all child records
+        val transactions = dao.getTransactionsForEmployeeList(employee.id)
+        val laborLogs = dao.getLaborLogsForEmployeeList(employee.id)
+        
+        // Delete children from Room
+        dao.deleteTransactionsForEmployee(employee.id)
+        dao.deleteLaborLogsForEmployee(employee.id)
+        
+        // Delete parent from Room
         dao.deleteEmployee(employee)
+        
+        // Delete children from Firestore
+        transactions.forEach { transaction ->
+            scheduleSync("transactions", transaction.id.toString(), emptyMap(), isDelete = true)
+        }
+        laborLogs.forEach { log ->
+            scheduleSync("labor_logs", log.id.toString(), emptyMap(), isDelete = true)
+        }
+        
+        // Delete parent from Firestore
         scheduleSync("employees", employee.id.toString(), emptyMap(), isDelete = true)
     }
     fun getAllEmployees(): Flow<List<EmployeeEntity>> = dao.getAllEmployees()
@@ -287,6 +348,25 @@ class FarmRepository @Inject constructor(
     fun getStockTransactions(itemId: Int): Flow<List<StockTransactionEntity>> = 
         dao.getTransactionsForItem(itemId)
 
+    suspend fun deleteInventoryItem(item: InventoryItemEntity) {
+        // Get all child records
+        val stockTransactions = dao.getStockTransactionsForItemList(item.id)
+        
+        // Delete children from Room
+        dao.deleteStockTransactionsForItem(item.id)
+        
+        // Delete parent from Room
+        dao.deleteInventoryItem(item)
+        
+        // Delete children from Firestore
+        stockTransactions.forEach { transaction ->
+            scheduleSync("stock_transactions", transaction.id.toString(), emptyMap(), isDelete = true)
+        }
+        
+        // Delete parent from Firestore
+        scheduleSync("inventory_items", item.id.toString(), emptyMap(), isDelete = true)
+    }
+
 
     // ================== LABOR LOG OPERATIONS ==================
     
@@ -409,17 +489,72 @@ class FarmRepository @Inject constructor(
         return try {
             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             
-            // Download all collections
-            downloadMachines(db, userId)
-            downloadFuelLogs(db, userId)
-            downloadBills(db, userId)
-            downloadLocations(db, userId)
-            downloadEmployees(db, userId)
-            downloadTransactions(db, userId)
-            downloadInventoryItems(db, userId)
-            downloadStockTransactions(db, userId)
-            downloadLaborLogs(db, userId)
-            downloadMaintenanceLogs(db, userId)
+            // Download all collections with individual error handling
+            // IMPORTANT: Download parent tables FIRST, then child tables to avoid FK constraints
+            
+            // === PARENT TABLES (no foreign keys) ===
+            
+            try {
+                downloadMachines(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadLocations(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadEmployees(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadInventoryItems(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            // === CHILD TABLES (have foreign keys) ===
+            
+            try {
+                downloadFuelLogs(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadBills(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadTransactions(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadStockTransactions(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadLaborLogs(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadMaintenanceLogs(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
             
             Result.success(true)
         } catch (e: Exception) {
@@ -440,8 +575,7 @@ class FarmRepository @Inject constructor(
             val machine = MachineEntity(
                 id = (data["id"] as? Long)?.toInt() ?: 0,
                 name = data["name"] as? String ?: "",
-                serviceIntervalHours = (data["serviceIntervalHours"] as? Long)?.toInt() ?: 0,
-                lastServiceReading = (data["lastServiceReading"] as? Long)?.toInt() ?: 0
+                dateAdded = data["dateAdded"] as? Long ?: System.currentTimeMillis()
             )
             dao.insertMachine(machine)
         }
@@ -598,15 +732,19 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
-            val log = LaborLogEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
-                employeeId = (data["employeeId"] as? Long)?.toInt() ?: 0,
-                laborCount = (data["laborCount"] as? Long)?.toInt() ?: 0,
-                workType = data["workType"] as? String ?: "",
-                totalAmount = data["totalAmount"] as? Double ?: 0.0,
-                date = data["date"] as? Long ?: 0L
-            )
-            dao.insertLaborLog(log)
+            try {
+                val log = LaborLogEntity(
+                    id = (data["id"] as? Long)?.toInt() ?: 0,
+                    employeeId = (data["employeeId"] as? Long)?.toInt() ?: 0,
+                    laborCount = (data["laborCount"] as? Long)?.toInt() ?: 0,
+                    workType = data["workType"] as? String ?: "",
+                    totalAmount = data["totalAmount"] as? Double ?: 0.0,
+                    date = data["date"] as? Long ?: 0L
+                )
+                dao.insertLaborLog(log)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
         }
     }
 
