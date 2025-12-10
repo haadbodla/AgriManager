@@ -172,6 +172,15 @@ class FarmRepository @Inject constructor(
         scheduleSync("locations", id.toString(), data)
     }
 
+    suspend fun updateLocation(location: LocationEntity) {
+        dao.updateLocation(location)
+        val data = mapOf(
+            "id" to location.id,
+            "name" to location.name
+        )
+        scheduleSync("locations", location.id.toString(), data)
+    }
+
     suspend fun deleteLocation(location: LocationEntity) {
         // Get all child records
         val bills = dao.getBillsForLocationList(location.id)
@@ -190,6 +199,8 @@ class FarmRepository @Inject constructor(
         // Delete parent from Firestore
         scheduleSync("locations", location.id.toString(), emptyMap(), isDelete = true)
     }
+
+    suspend fun getLocationById(id: Int): LocationEntity? = dao.getLocationById(id)
 
 
     // ================== BILL OPERATIONS ==================
@@ -239,6 +250,17 @@ class FarmRepository @Inject constructor(
         )
         scheduleSync("employees", id.toString(), data)
     }
+
+    suspend fun updateEmployee(employee: EmployeeEntity) {
+        dao.updateEmployee(employee)
+        val data = mapOf(
+            "id" to employee.id,
+            "name" to employee.name,
+            "baseSalary" to employee.baseSalary
+        )
+        scheduleSync("employees", employee.id.toString(), data)
+    }
+
     suspend fun deleteEmployee(employee: EmployeeEntity) {
         // Get all child records
         val transactions = dao.getTransactionsForEmployeeList(employee.id)

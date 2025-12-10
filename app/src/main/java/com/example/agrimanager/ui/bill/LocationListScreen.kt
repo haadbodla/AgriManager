@@ -1,4 +1,4 @@
-package com.example.agrimanager.ui.employee
+package com.example.agrimanager.ui.bill
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,30 +14,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.agrimanager.data.local.EmployeeEntity
+import com.example.agrimanager.data.local.LocationEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EmployeeListScreen(
+fun LocationListScreen(
     onNavigateBack: () -> Unit,
     navController: NavController,
-    viewModel: EmployeeViewModel = hiltViewModel()
+    viewModel: LocationViewModel = hiltViewModel()
 ) {
-    val employees by viewModel.employeeList.collectAsState()
+    val locations by viewModel.locations.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var employeeToEdit by remember { mutableStateOf<EmployeeEntity?>(null) }
-    var employeeToDelete by remember { mutableStateOf<EmployeeEntity?>(null) }
+    var locationToEdit by remember { mutableStateOf<LocationEntity?>(null) }
+    var locationToDelete by remember { mutableStateOf<LocationEntity?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Employees") },
+                title = { Text("Locations") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -50,18 +48,18 @@ fun EmployeeListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Employee")
+                Icon(Icons.Default.Add, contentDescription = "Add Location")
             }
         }
     ) { paddingValues ->
-        if (employees.isEmpty()) {
+        if (locations.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No employees yet")
+                Text("No locations yet")
             }
         } else {
             LazyColumn(
@@ -71,58 +69,61 @@ fun EmployeeListScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(employees) { employee ->
-                    EmployeeCard(
-                        employee = employee,
-                        onClick = { navController.navigate("salary/${employee.id}") },
+                items(locations) { location ->
+                    LocationCard(
+                        location = location,
+                        onClick = { navController.navigate("location-bills/${location.id}") },
                         onEdit = {
-                            employeeToEdit = employee
+                            locationToEdit = location
                             showEditDialog = true
                         },
                         onDelete = {
-                            employeeToDelete = employee
+                            locationToDelete = location
                             showDeleteDialog = true
                         }
                     )
                 }
             }
         }
+
         if (showAddDialog) {
-            AddEmployeeDialog(
+            AddLocationDialog(
+                existingLocations = locations,
                 onDismiss = { showAddDialog = false },
-                onSave = { name, salary ->
-                    viewModel.addEmployee(name, salary)
+                onSave = { name ->
+                    viewModel.addLocation(name)
                     showAddDialog = false
                 }
             )
         }
 
-        if (showEditDialog && employeeToEdit != null) {
-            EditEmployeeDialog(
-                employee = employeeToEdit!!,
+        if (showEditDialog && locationToEdit != null) {
+            EditLocationDialog(
+                location = locationToEdit!!,
+                existingLocations = locations,
                 onDismiss = {
                     showEditDialog = false
-                    employeeToEdit = null
+                    locationToEdit = null
                 },
-                onSave = { newName, newSalary ->
-                    viewModel.updateEmployee(employeeToEdit!!, newName, newSalary)
+                onSave = { newName ->
+                    viewModel.updateLocation(locationToEdit!!, newName)
                     showEditDialog = false
-                    employeeToEdit = null
+                    locationToEdit = null
                 }
             )
         }
 
-        if (showDeleteDialog && employeeToDelete != null) {
-            DeleteEmployeeConfirmationDialog(
-                employeeName = employeeToDelete!!.name,
+        if (showDeleteDialog && locationToDelete != null) {
+            DeleteLocationConfirmationDialog(
+                locationName = locationToDelete!!.name,
                 onConfirm = {
-                    viewModel.deleteEmployee(employeeToDelete!!)
+                    viewModel.deleteLocation(locationToDelete!!)
                     showDeleteDialog = false
-                    employeeToDelete = null
+                    locationToDelete = null
                 },
                 onDismiss = {
                     showDeleteDialog = false
-                    employeeToDelete = null
+                    locationToDelete = null
                 }
             )
         }
@@ -131,8 +132,8 @@ fun EmployeeListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmployeeCard(
-    employee: EmployeeEntity,
+private fun LocationCard(
+    location: LocationEntity,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -150,20 +151,16 @@ private fun EmployeeCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = employee.name,
+                    text = location.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Base Salary: Rs ${employee.baseSalary}",
-                    style = MaterialTheme.typography.bodySmall
                 )
             }
             // Edit button
             IconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Employee",
+                    contentDescription = "Edit Location",
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -171,7 +168,7 @@ private fun EmployeeCard(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Employee",
+                    contentDescription = "Delete Location",
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -180,36 +177,40 @@ private fun EmployeeCard(
 }
 
 @Composable
-private fun AddEmployeeDialog(
+private fun AddLocationDialog(
+    existingLocations: List<LocationEntity>,
     onDismiss: () -> Unit,
-    onSave: (String, Double) -> Unit
+    onSave: (String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var salaryText by remember { mutableStateOf("") }
-    val isValid = name.isNotBlank() && salaryText.toDoubleOrNull() != null && salaryText.toDoubleOrNull()!! > 0
+    val trimmedName = name.trim()
+    val isDuplicate = existingLocations.any { it.name.equals(trimmedName, ignoreCase = true) }
+    val isValid = trimmedName.isNotBlank() && !isDuplicate
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Employee") },
+        title = { Text("Add Location") },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Employee Name") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = salaryText,
-                    onValueChange = { salaryText = it },
-                    label = { Text("Base Salary") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    label = { Text("Location Name") },
+                    isError = trimmedName.isNotBlank() && isDuplicate,
+                    supportingText = {
+                        if (trimmedName.isNotBlank() && isDuplicate) {
+                            Text(
+                                "Location name already exists",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSave(name, salaryText.toDouble()) },
+                onClick = { onSave(trimmedName) },
                 enabled = isValid
             ) {
                 Text("Save")
@@ -222,41 +223,43 @@ private fun AddEmployeeDialog(
 }
 
 @Composable
-private fun EditEmployeeDialog(
-    employee: EmployeeEntity,
+private fun EditLocationDialog(
+    location: LocationEntity,
+    existingLocations: List<LocationEntity>,
     onDismiss: () -> Unit,
-    onSave: (String, Double) -> Unit
+    onSave: (String) -> Unit
 ) {
-    var name by remember { mutableStateOf(employee.name) }
-    var salaryText by remember { mutableStateOf(employee.baseSalary.toString()) }
-    val salary = salaryText.toDoubleOrNull()
-    val isValid = name.isNotBlank() && 
-                  salary != null && 
-                  salary > 0 &&
-                  (name != employee.name || salary != employee.baseSalary)
+    var name by remember { mutableStateOf(location.name) }
+    val trimmedName = name.trim()
+    val isDuplicate = existingLocations.any { 
+        it.id != location.id && it.name.equals(trimmedName, ignoreCase = true) 
+    }
+    val isValid = trimmedName.isNotBlank() && trimmedName != location.name && !isDuplicate
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Employee") },
+        title = { Text("Edit Location") },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Employee Name") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = salaryText,
-                    onValueChange = { salaryText = it },
-                    label = { Text("Base Salary") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    label = { Text("Location Name") },
+                    isError = trimmedName.isNotBlank() && isDuplicate,
+                    supportingText = {
+                        if (trimmedName.isNotBlank() && isDuplicate) {
+                            Text(
+                                "Location name already exists",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSave(name, salary!!) },
+                onClick = { onSave(trimmedName) },
                 enabled = isValid
             ) {
                 Text("Save")
@@ -269,8 +272,8 @@ private fun EditEmployeeDialog(
 }
 
 @Composable
-private fun DeleteEmployeeConfirmationDialog(
-    employeeName: String,
+private fun DeleteLocationConfirmationDialog(
+    locationName: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -283,18 +286,17 @@ private fun DeleteEmployeeConfirmationDialog(
                 tint = MaterialTheme.colorScheme.error
             )
         },
-        title = { Text("Delete Employee?") },
+        title = { Text("Delete Location?") },
         text = {
             Column {
-                Text("Are you sure you want to delete \"$employeeName\"?")
+                Text("Are you sure you want to delete \"$locationName\"?")
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "This will also permanently delete:",
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error
                 )
-                Text("• All salary transactions (advances & payments)")
-                Text("• All labor logs")
+                Text("• All bills for this location")
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "This action cannot be undone.",

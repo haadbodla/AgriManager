@@ -15,6 +15,9 @@ interface FarmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEmployee(employee: EmployeeEntity): Long
 
+    @Update
+    suspend fun updateEmployee(employee: EmployeeEntity)
+
     @Query("SELECT * FROM employees ORDER BY name ASC")
     fun getAllEmployees(): Flow<List<EmployeeEntity>>
 
@@ -85,11 +88,17 @@ interface FarmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLocation(location: LocationEntity): Long
 
+    @Update
+    suspend fun updateLocation(location: LocationEntity)
+
     @Delete
     suspend fun deleteLocation(location: LocationEntity)
 
     @Query("SELECT * FROM locations ORDER BY name ASC")
     fun getAllLocations(): Flow<List<LocationEntity>>
+
+    @Query("SELECT * FROM locations WHERE location_id = :id")
+    suspend fun getLocationById(id: Int): LocationEntity?
 
     // --- Bills ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)

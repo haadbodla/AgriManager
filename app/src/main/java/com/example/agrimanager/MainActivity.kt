@@ -11,7 +11,8 @@ import androidx.navigation.NavController
 import androidx.navigation.navArgument
 import com.example.agrimanager.data.repository.AuthRepository
 import com.example.agrimanager.ui.auth.LoginScreen
-import com.example.agrimanager.ui.bill.BillListScreen
+import com.example.agrimanager.ui.bill.LocationListScreen as BillLocationListScreen
+import com.example.agrimanager.ui.bill.LocationBillsScreen
 import com.example.agrimanager.ui.dashboard.DashboardScreen
 import com.example.agrimanager.ui.fuel.FuelLogScreen
 import com.example.agrimanager.ui.location.LocationListScreen
@@ -107,10 +108,18 @@ class MainActivity : ComponentActivity() {
                 }
 
                 composable("bill_list") {
-                    BillListScreen(
-                        onBackClick = { navController.popBackStack() },
-                        onManageLocationsClick = { navController.navigate("location_list") }
+                    BillLocationListScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        navController = navController
                     )
+                }
+
+                composable(
+                    "location-bills/{locationId}",
+                    arguments = listOf(navArgument("locationId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val id = backStackEntry.arguments?.getInt("locationId") ?: -1
+                    LocationBillsScreen(locationId = id, navController = navController)
                 }
 
                 composable("location_list") {

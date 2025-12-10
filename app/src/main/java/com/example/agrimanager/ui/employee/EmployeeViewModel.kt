@@ -31,6 +31,18 @@ class EmployeeViewModel @Inject constructor(
         }
     }
 
+    fun updateEmployee(employee: EmployeeEntity, newName: String, newBaseSalary: Double) {
+        if (newName.isBlank() || newBaseSalary <= 0) return
+
+        viewModelScope.launch {
+            val updatedEmployee = employee.copy(
+                name = newName,
+                baseSalary = newBaseSalary
+            )
+            repository.updateEmployee(updatedEmployee)
+        }
+    }
+
     fun deleteEmployee(employee: EmployeeEntity) {
         viewModelScope.launch {
             repository.deleteEmployee(employee)
