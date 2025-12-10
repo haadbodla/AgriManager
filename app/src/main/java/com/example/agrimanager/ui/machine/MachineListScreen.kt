@@ -13,11 +13,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.MachineEntity
+import com.example.agrimanager.utils.PermissionHelper
+import dagger.hilt.android.EntryPointAccessors
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +30,15 @@ fun MachineListScreen(
     viewModel: MachineViewModel = hiltViewModel(),
     onMachineClick: (Int) -> Unit
 ) {
+    // Get PermissionHelper
+    val context = LocalContext.current
+    val permissionHelper = remember {
+        EntryPointAccessors.fromActivity(
+            context as android.app.Activity,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
+    
     val machines by viewModel.machineList.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -77,7 +90,8 @@ fun MachineListScreen(
                             machineToEdit = machine
                             showEditDialog = true
                         },
-                        onClick = { onMachineClick(machine.id) }
+                        onClick = { onMachineClick(machine.id) },
+                        permissionHelper = permissionHelper
                     )
                 }
             }
@@ -132,7 +146,8 @@ fun MachineItem(
     machine: MachineEntity,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    permissionHelper: PermissionHelper
 ) {
     Card(
         onClick = onClick, // <--- NEW: Enable clicking the card
@@ -164,8 +179,11 @@ fun MachineItem(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+            // Only show delete button for owners
+            if (permissionHelper.canDelete(PermissionHelper.FEATURE_MACHINES)) {
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

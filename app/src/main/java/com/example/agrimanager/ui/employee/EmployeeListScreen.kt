@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,6 +20,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.agrimanager.data.local.EmployeeEntity
+import com.example.agrimanager.utils.PermissionHelper
+import dagger.hilt.android.EntryPointAccessors
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +31,15 @@ fun EmployeeListScreen(
     navController: NavController,
     viewModel: EmployeeViewModel = hiltViewModel()
 ) {
+    // Get PermissionHelper
+    val context = LocalContext.current
+    val permissionHelper = remember {
+        EntryPointAccessors.fromActivity(
+            context as android.app.Activity,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
+    
     val employees by viewModel.employeeList.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -82,7 +95,8 @@ fun EmployeeListScreen(
                         onDelete = {
                             employeeToDelete = employee
                             showDeleteDialog = true
-                        }
+                        },
+                        permissionHelper = permissionHelper
                     )
                 }
             }
@@ -135,7 +149,8 @@ private fun EmployeeCard(
     employee: EmployeeEntity,
     onClick: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    permissionHelper: PermissionHelper
 ) {
     Card(
         onClick = onClick,
@@ -167,13 +182,15 @@ private fun EmployeeCard(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-            // Delete button
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Employee",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            // Delete button - Only show for owners
+            if (permissionHelper.canDelete(PermissionHelper.FEATURE_EMPLOYEES)) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Employee",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }

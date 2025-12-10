@@ -1,0 +1,190 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    // Check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Check if user is the owner (has a document in users collection)
+    function isOwner() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Check if user is a manager under any owner
+    function isManager() {
+      return isSignedIn() && 
+             existsAfter(/databases/$(database)/documents/users/{ownerId}/managers/$(request.auth.uid));
+    }
+    
+    // Get the farm owner ID for the current user
+    // If user is owner, returns their own ID
+    // If user is manager, returns their owner's ID
+    function getFarmOwnerId() {
+      return isOwner() ? request.auth.uid : 
+             get(/databases/$(database)/documents/users/{ownerId}/managers/$(request.auth.uid)).data.farmOwnerId;
+    }
+    
+    // Check if user has access to a specific owner's data
+    function hasAccessToOwnerData(ownerId) {
+      return isSignedIn() && (
+        // User is the owner
+        request.auth.uid == ownerId ||
+        // User is a manager for this owner
+        exists(/databases/$(database)/documents/users/$(ownerId)/managers/$(request.auth.uid))
+      );
+    }
+    
+    // Check if user can delete (only owners can delete)
+    function canDelete() {
+      return isOwner();
+    }
+    
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    
+    match /users/{userId} {
+      // Anyone can read their own user document
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      
+      // Only the user can create their own document (during signup)
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+                       request.resource.data.role == 'owner' &&
+                       request.resource.data.farmOwnerId == userId;
+      
+      // Only the user can update their own document
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      
+      // Only the user can delete their own document
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+      
+      // ============================================
+      // MANAGERS SUBCOLLECTION
+      // ============================================
+      
+      match /managers/{managerId} {
+        // Owner can read all their managers
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        
+        // Owner can add managers
+        allow create: if isSignedIn() && 
+                         request.auth.uid == userId &&
+                         request.resource.data.role == 'manager' &&
+                         request.resource.data.farmOwnerId == userId;
+        
+        // Owner can update manager info
+        allow update: if isSignedIn() && request.auth.uid == userId;
+        
+        // Owner can delete managers
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+    
+    // ============================================
+    // FARM DATA COLLECTIONS
+    // ============================================
+    
+    // Machines Collection
+    match /users/{ownerId}/machines/{machineId} {
+      // Owners and their managers can read
+      allow read: if hasAccessToOwnerData(ownerId);
+      
+      // Owners and managers can create
+      allow create: if hasAccessToOwnerData(ownerId);
+      
+      // Owners and managers can update
+      allow update: if hasAccessToOwnerData(ownerId);
+      
+      // Only owners can delete
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Fuel Logs Collection
+    match /users/{ownerId}/fuelLogs/{logId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Locations Collection
+    match /users/{ownerId}/locations/{locationId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Bills Collection
+    match /users/{ownerId}/bills/{billId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Employees Collection
+    match /users/{ownerId}/employees/{employeeId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Transactions Collection (Salary)
+    match /users/{ownerId}/transactions/{transactionId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Inventory Items Collection
+    match /users/{ownerId}/inventoryItems/{itemId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Stock Transactions Collection
+    match /users/{ownerId}/stockTransactions/{transactionId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Labor Logs Collection
+    match /users/{ownerId}/laborLogs/{logId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // Maintenance Logs Collection
+    match /users/{ownerId}/maintenanceLogs/{logId} {
+      allow read: if hasAccessToOwnerData(ownerId);
+      allow create: if hasAccessToOwnerData(ownerId);
+      allow update: if hasAccessToOwnerData(ownerId);
+      allow delete: if isSignedIn() && request.auth.uid == ownerId;
+    }
+    
+    // ============================================
+    // DENY ALL OTHER ACCESS
+    // ============================================
+    
+    // Explicitly deny access to any other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

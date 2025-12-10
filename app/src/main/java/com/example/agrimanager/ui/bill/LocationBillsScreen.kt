@@ -13,12 +13,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.agrimanager.data.local.BillEntity
+import com.example.agrimanager.utils.PermissionHelper
+import dagger.hilt.android.EntryPointAccessors
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -30,6 +34,15 @@ fun LocationBillsScreen(
     navController: NavController,
     viewModel: LocationBillsViewModel = hiltViewModel()
 ) {
+    // Get PermissionHelper
+    val context = LocalContext.current
+    val permissionHelper = remember {
+        EntryPointAccessors.fromActivity(
+            context as android.app.Activity,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
+    
     val location by viewModel.location.collectAsState()
     val bills by viewModel.bills.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
@@ -86,7 +99,8 @@ fun LocationBillsScreen(
                             editingBill = bill
                             showDialog = true
                         },
-                        onDelete = { viewModel.deleteBill(bill.id) }
+                        onDelete = { viewModel.deleteBill(bill.id) },
+                        permissionHelper = permissionHelper
                     )
                 }
             }
@@ -117,7 +131,8 @@ fun LocationBillsScreen(
 private fun BillItemCard(
     bill: BillEntity,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    permissionHelper: PermissionHelper
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -150,8 +165,11 @@ private fun BillItemCard(
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, "Edit", tint = MaterialTheme.colorScheme.primary)
             }
-            IconButton(onClick = { showDeleteDialog = true }) {
-                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+            // Only show delete button for owners
+            if (permissionHelper.canDelete(PermissionHelper.FEATURE_BILLS)) {
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

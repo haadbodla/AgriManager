@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // TEMPORARY MIGRATION RULES
+    // These rules are more permissive to allow data migration
+    // Replace with strict rules from firestore.rules after migration
+    // ============================================
+    
+    // Helper function - check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    
+    match /users/{userId} {
+      // Anyone authenticated can read/write their own user document
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      
+      // Managers subcollection
+      match /managers/{managerId} {
+        // Owner can manage their managers
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      // ============================================
+      // FARM DATA COLLECTIONS (PERMISSIVE FOR MIGRATION)
+      // ============================================
+      
+      // Allow authenticated users to access their own data
+      match /machines/{machineId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /fuelLogs/{logId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /fuel_logs/{logId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /locations/{locationId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /bills/{billId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /employees/{employeeId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /transactions/{transactionId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /inventoryItems/{itemId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /inventory_items/{itemId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /stockTransactions/{transactionId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /stock_transactions/{transactionId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /laborLogs/{logId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /labor_logs/{logId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /maintenanceLogs/{logId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /maintenance_logs/{logId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

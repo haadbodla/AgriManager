@@ -26,6 +26,7 @@ import com.example.agrimanager.ui.maintenance.AddMaintenanceLogScreen
 import com.example.agrimanager.ui.maintenance.MaintenanceListScreen
 import com.example.agrimanager.ui.inventory.InventoryDetailScreen
 import com.example.agrimanager.ui.analytics.AnalyticsScreen
+import com.example.agrimanager.ui.users.UserManagementScreen  // NEW: Import UserManagementScreen
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
                         onLaborClick = { navController.navigate("labor_list") },
                         onMaintenanceClick = { navController.navigate("maintenance_list") },
                         onAnalyticsClick = { navController.navigate("analytics") },
+                        onManageUsersClick = { navController.navigate("user_management") },  // NEW: Navigate to user management
                         onLogoutClick = {
                             authRepository.signOut()
                             navController.navigate("login") {
@@ -192,6 +194,11 @@ class MainActivity : ComponentActivity() {
 
                 composable("analytics") {
                     AnalyticsScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                // NEW: User Management Screen (Owner only)
+                composable("user_management") {
+                    UserManagementScreen(onNavigateBack = { navController.popBackStack() })
                 }
             }
 

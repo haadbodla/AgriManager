@@ -13,10 +13,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.LaborLogWithEmployee
+import com.example.agrimanager.utils.PermissionHelper
+import dagger.hilt.android.EntryPointAccessors
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,6 +32,15 @@ fun LaborListScreen(
     onEditLaborClick: (Int) -> Unit,
     viewModel: LaborViewModel = hiltViewModel()
 ) {
+    // Get PermissionHelper
+    val context = LocalContext.current
+    val permissionHelper = remember {
+        EntryPointAccessors.fromActivity(
+            context as android.app.Activity,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
+    
     val laborLogs by viewModel.laborLogs.collectAsState()
 
     Scaffold(
@@ -75,7 +88,8 @@ fun LaborListScreen(
                     LaborLogCard(
                         log = log,
                         onEdit = { onEditLaborClick(log.id) },
-                        onDelete = { viewModel.deleteLaborLog(log.id) }
+                        onDelete = { viewModel.deleteLaborLog(log.id) },
+                        permissionHelper = permissionHelper
                     )
                 }
             }
@@ -87,7 +101,8 @@ fun LaborListScreen(
 fun LaborLogCard(
     log: LaborLogWithEmployee,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    permissionHelper: PermissionHelper
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
@@ -166,12 +181,15 @@ fun LaborLogCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                // Only show delete button for owners
+                if (permissionHelper.canDelete(PermissionHelper.FEATURE_LABOR)) {
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }

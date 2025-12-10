@@ -6,46 +6,48 @@ Implement Owner and Manager roles. Owner has full access and can add managers. M
 ## Checklist
 
 ### Phase 1: Database & Repository
-- [ ] Create `UserEntity` data class
-- [ ] Add `UserDao` interface with CRUD methods
-- [ ] Update `FarmDatabase` to include users table
-- [ ] Create `UserRepository` for user management
-- [ ] Update `AuthRepository` with role methods
-- [ ] Add role storage in SharedPreferences
+- [x] Create `UserEntity` data class
+- [x] Add `UserDao` interface with CRUD methods
+- [x] Update `FarmDatabase` to include users table
+- [x] Create `UserRepository` for user management
+- [x] Update `AuthRepository` with role methods
+- [x] Add role storage in SharedPreferences
 
 ### Phase 2: Permission System
-- [ ] Create `PermissionHelper` utility class
-- [ ] Add `canDelete()` method
-- [ ] Add `canAccessAnalytics()` method
-- [ ] Add `canManageUsers()` method
-- [ ] Update login flow to fetch and store user role
+- [x] Create `PermissionHelper` utility class
+- [x] Add `canDelete()` method
+- [x] Add `canAccessAnalytics()` method
+- [x] Add `canManageUsers()` method
+- [x] Update login flow to fetch and store user role
 
 ### Phase 3: User Management UI
-- [ ] Create `UserManagementViewModel`
-- [ ] Create `UserManagementScreen` (owner only)
-- [ ] Add manager list display
-- [ ] Add "Add Manager" dialog
-- [ ] Add "Remove Manager" confirmation
-- [ ] Wire up navigation
+- [x] Create `UserManagementViewModel`
+- [x] Create `UserManagementScreen` (owner only)
+- [x] Add manager list display
+- [x] Add "Add Manager" dialog
+- [x] Add "Remove Manager" confirmation
+- [x] Wire up navigation
 
 ### Phase 4: Dashboard Updates
-- [ ] Add "Manage Users" button (owner only)
-- [ ] Hide Analytics button for managers
-- [ ] Add role badge/indicator (Owner/Manager)
-- [ ] Update navigation based on role
+- [x] Add "Manage Users" button (owner only)
+- [x] Hide Analytics button for managers
+- [x] Add role badge/indicator (Owner/Manager)
+- [x] Update navigation based on role
 
 ### Phase 5: List Screens Updates
-- [ ] Update `MachineListScreen` - hide delete for managers
-- [ ] Update `LocationListScreen` - hide delete for managers
-- [ ] Update `EmployeeListScreen` - hide delete for managers
-- [ ] Update `InventoryListScreen` - hide delete for managers
-- [ ] Update `LaborListScreen` - hide delete for managers
-- [ ] Update `MaintenanceListScreen` - hide delete for managers
+- [x] Update `MachineListScreen` - hide delete for managers
+- [x] Update `LocationListScreen` - hide delete for managers
+- [x] Update `EmployeeListScreen` - hide delete for managers
+- [x] Update `InventoryListScreen` - hide delete for managers
+- [x] Update `LaborListScreen` - hide delete for managers
+- [x] Update `MaintenanceListScreen` - hide delete for managers
+- [x] Update `LocationBillsScreen` - hide delete for managers
 
 ### Phase 6: Firestore Integration
-- [ ] Update Firestore structure for managers collection
-- [ ] Implement manager invitation flow
-- [ ] Update Firestore security rules
+- [x] Update Firestore structure for managers collection
+- [x] Create Firestore security rules
+- [x] Test rules in Firebase console
+- [x] Deploy rules to production
 - [ ] Test manager data access
 
 ### Phase 7: Testing

@@ -11,10 +11,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.LocationEntity
+import com.example.agrimanager.utils.PermissionHelper
+import dagger.hilt.android.EntryPointAccessors
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,6 +26,15 @@ fun LocationListScreen(
     onBackClick: () -> Unit,
     viewModel: LocationViewModel = hiltViewModel()
 ) {
+    // Get PermissionHelper
+    val context = LocalContext.current
+    val permissionHelper = remember {
+        EntryPointAccessors.fromActivity(
+            context as android.app.Activity,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
+    
     val locations by viewModel.locationList.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -72,11 +85,14 @@ fun LocationListScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            IconButton(onClick = {
-                                locationToDelete = location
-                                showDeleteDialog = true
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                            // Only show delete button for owners
+                            if (permissionHelper.canDelete(PermissionHelper.FEATURE_LOCATIONS)) {
+                                IconButton(onClick = {
+                                    locationToDelete = location
+                                    showDeleteDialog = true
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }

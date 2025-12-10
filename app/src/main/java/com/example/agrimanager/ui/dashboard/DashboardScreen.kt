@@ -7,10 +7,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,6 +21,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.components.ActivityComponent
+import com.example.agrimanager.utils.PermissionHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +36,17 @@ fun DashboardScreen(
     onLaborClick: () -> Unit,
     onMaintenanceClick: () -> Unit,
     onAnalyticsClick: () -> Unit,
+    onManageUsersClick: () -> Unit,  // NEW: Navigate to user management
     onLogoutClick: () -> Unit
 ) {
+    // Get PermissionHelper from Hilt
+    val context = LocalContext.current
+    val permissionHelper = remember {
+        EntryPointAccessors.fromActivity(
+            context as android.app.Activity,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
     // 1. Define the Menu Data
     val menuItems = listOf(
         DashboardItem("Fuel", Color(0xFFFFC107), Icons.Default.LocalGasStation) { onFuelClick() },
@@ -45,7 +60,16 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AgriManager Dashboard", fontWeight = FontWeight.Bold) },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("AgriManager Dashboard", fontWeight = FontWeight.Bold)
+                        // NEW: Role Badge
+                        RoleBadge(permissionHelper = permissionHelper)
+                    }
+                },
                 actions = {
                     IconButton(onClick = onLogoutClick) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
@@ -84,19 +108,40 @@ fun DashboardScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Analytics Button
-            Button(
-                onClick = onAnalyticsClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF673AB7)
-                )
-            ) {
-                Icon(Icons.Default.Analytics, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("View Expense Analytics", fontSize = 16.sp)
+            // NEW: Analytics Button - Only visible to owners
+            if (permissionHelper.canAccessAnalytics()) {
+                Button(
+                    onClick = onAnalyticsClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF673AB7)
+                    )
+                ) {
+                    Icon(Icons.Default.Analytics, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("View Expense Analytics", fontSize = 16.sp)
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            
+            // NEW: Manage Users Button - Only visible to owners
+            if (permissionHelper.canManageUsers()) {
+                Button(
+                    onClick = onManageUsersClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF3F51B5)
+                    )
+                ) {
+                    Icon(Icons.Default.People, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Manage Users", fontSize = 16.sp)
+                }
             }
         }
     }
@@ -128,6 +173,34 @@ fun DashboardButton(item: DashboardItem) {
             text = item.label,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+// NEW: Role Badge Component
+@Composable
+fun RoleBadge(
+    permissionHelper: PermissionHelper,
+    modifier: Modifier = Modifier
+) {
+    val role = permissionHelper.getRoleDisplayName()
+    val backgroundColor = if (permissionHelper.isOwner()) {
+        Color(0xFF4CAF50)  // Green for owner
+    } else {
+        Color(0xFF2196F3)  // Blue for manager
+    }
+    
+    Surface(
+        modifier = modifier,
+        color = backgroundColor,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Text(
+            text = role,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
         )
     }
 }
