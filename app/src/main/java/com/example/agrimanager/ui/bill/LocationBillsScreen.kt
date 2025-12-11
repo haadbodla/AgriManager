@@ -3,6 +3,8 @@ package com.example.agrimanager.ui.bill
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -37,8 +39,8 @@ fun LocationBillsScreen(
     // Get PermissionHelper
     val context = LocalContext.current
     val permissionHelper = remember {
-        EntryPointAccessors.fromActivity(
-            context as android.app.Activity,
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
             PermissionHelperEntryPoint::class.java
         ).permissionHelper()
     }
@@ -198,6 +200,7 @@ private fun BillItemCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BillDialog(
     editingBill: BillEntity?,
@@ -207,18 +210,51 @@ private fun BillDialog(
     var month by remember(editingBill) { mutableStateOf(editingBill?.billingMonth ?: "") }
     var amount by remember(editingBill) { mutableStateOf(editingBill?.amount?.toString() ?: "") }
     val isValid = month.isNotBlank() && amount.toDoubleOrNull() != null && amount.toDoubleOrNull()!! > 0
+    
+    var expanded by remember { mutableStateOf(false) }
+    val months = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (editingBill != null) "Edit Bill" else "Add Bill") },
         text = {
-            Column {
-                OutlinedTextField(
-                    value = month,
-                    onValueChange = { month = it },
-                    label = { Text("Billing Month") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                // Month Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = month,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Billing Month") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        months.forEach { monthName ->
+                            DropdownMenuItem(
+                                text = { Text(monthName) },
+                                onClick = {
+                                    month = monthName
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = amount,

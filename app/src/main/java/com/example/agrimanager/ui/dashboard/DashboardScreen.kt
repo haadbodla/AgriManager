@@ -49,8 +49,8 @@ fun DashboardScreen(
     // Get PermissionHelper from Hilt
     val context = LocalContext.current
     val permissionHelper = remember {
-        EntryPointAccessors.fromActivity(
-            context as android.app.Activity,
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
             PermissionHelperEntryPoint::class.java
         ).permissionHelper()
     }
@@ -194,24 +194,28 @@ fun RoleBadge(
     modifier: Modifier = Modifier
 ) {
     val role = permissionHelper.getRoleDisplayName()
-    val backgroundColor = if (permissionHelper.isOwner()) {
-        Color(0xFF4CAF50)  // Green for owner
-    } else {
-        Color(0xFF2196F3)  // Blue for manager
-    }
     
-    Surface(
-        modifier = modifier,
-        color = backgroundColor,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Text(
-            text = role,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold
-        )
+    // Only show badge if role is valid
+    if (role != "Unknown") {
+        val backgroundColor = if (permissionHelper.isOwner()) {
+            Color(0xFF4CAF50)  // Green for owner
+        } else {
+            Color(0xFF2196F3)  // Blue for manager
+        }
+        
+        Surface(
+            modifier = modifier,
+            color = backgroundColor,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = role,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 

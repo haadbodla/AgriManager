@@ -29,6 +29,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FuelLogScreen(
+    machineId: Int,
     onBackClick: () -> Unit,
     viewModel: FuelLogViewModel = hiltViewModel()
 ) {

@@ -18,7 +18,7 @@ class FuelLogViewModel @Inject constructor(
     private val repository: FarmRepository
 ) : ViewModel() {
 
-    private val machineId: Int = checkNotNull(savedStateHandle["machineId"])
+    private val machineId: Int = savedStateHandle.get<Int>("machineId") ?: 0
 
     val fuelLogs: StateFlow<List<FuelLogEntity>> = repository.getFuelLogs(machineId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

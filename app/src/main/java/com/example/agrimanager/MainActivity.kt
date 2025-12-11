@@ -40,11 +40,24 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
+        
+        // Check if this is first launch after install
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val isFirstLaunch = prefs.getBoolean("is_first_launch", true)
+        
         setContent {
             val navController = rememberNavController()
 
             // Determine start screen dynamically
-            val startScreen = if (authRepository.getCurrentUser() != null) "dashboard" else "login"
+            // If first launch, always show login (even if Firebase has session)
+            // Otherwise, check if user is logged in
+            val startScreen = if (isFirstLaunch) {
+                // Mark as not first launch anymore
+                prefs.edit().putBoolean("is_first_launch", false).apply()
+                "login"
+            } else {
+                if (authRepository.getCurrentUser() != null) "dashboard" else "login"
+            }
 
             NavHost(navController = navController, startDestination = startScreen) {
 
@@ -105,8 +118,12 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                composable("fuel_logs/{machineId}", arguments = listOf(navArgument("machineId") { type = NavType.IntType })) {
-                    FuelLogScreen(onBackClick = { navController.popBackStack() })
+                composable("fuel_logs/{machineId}", arguments = listOf(navArgument("machineId") { type = NavType.IntType })) { backStackEntry ->
+                    val machineId = backStackEntry.arguments?.getInt("machineId") ?: 0
+                    FuelLogScreen(
+                        machineId = machineId,
+                        onBackClick = { navController.popBackStack() }
+                    )
                 }
 
                 composable("bill_list") {

@@ -34,8 +34,8 @@ fun EmployeeListScreen(
     // Get PermissionHelper
     val context = LocalContext.current
     val permissionHelper = remember {
-        EntryPointAccessors.fromActivity(
-            context as android.app.Activity,
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
             PermissionHelperEntryPoint::class.java
         ).permissionHelper()
     }
