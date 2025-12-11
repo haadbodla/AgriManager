@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.InventoryItemEntity
@@ -43,7 +45,10 @@ fun InventoryListScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             )
         },
         floatingActionButton = {
@@ -334,15 +339,39 @@ fun RecordPurchaseDialog(
 
                 OutlinedTextField(
                     value = quantity,
-                    onValueChange = { quantity = it },
+                    onValueChange = { newValue ->
+                        // Allow digits and decimal point
+                        if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                            quantity = newValue
+                        }
+                    },
                     label = { Text("Quantity Bought") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = quantity.isNotEmpty() && quantity.toDoubleOrNull() == null,
+                    supportingText = {
+                        if (quantity.isNotEmpty() && quantity.toDoubleOrNull() == null) {
+                            Text("Please enter a valid number")
+                        }
+                    }
                 )
                 OutlinedTextField(
                     value = totalCost,
-                    onValueChange = { totalCost = it },
+                    onValueChange = { newValue ->
+                        // Allow digits and decimal point
+                        if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                            totalCost = newValue
+                        }
+                    },
                     label = { Text("Total Cost") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = totalCost.isNotEmpty() && totalCost.toDoubleOrNull() == null,
+                    supportingText = {
+                        if (totalCost.isNotEmpty() && totalCost.toDoubleOrNull() == null) {
+                            Text("Please enter a valid amount")
+                        }
+                    }
                 )
             }
         },
@@ -365,6 +394,16 @@ fun RecordPurchaseDialog(
                             totalCost.toDoubleOrNull() ?: 0.0
                         )
                     }
+                },
+                enabled = if (selectedTab == 0) {
+                    selectedItemId != null && 
+                    quantity.toDoubleOrNull() != null && 
+                    totalCost.toDoubleOrNull() != null
+                } else {
+                    itemName.isNotBlank() && 
+                    category.isNotBlank() && 
+                    quantity.toDoubleOrNull() != null && 
+                    totalCost.toDoubleOrNull() != null
                 }
             ) {
                 Text("Save")

@@ -43,15 +43,13 @@ class AuthRepository @Inject constructor(
                 return Result.failure(userSyncResult.exceptionOrNull() ?: Exception("User sync failed"))
             }
             
-            // Download data from Firestore if local database is empty
-            val isEmpty = farmRepository.isLocalDatabaseEmpty()
+            // CHANGED: Always download data from Firestore on login
+            // This ensures owner sees manager's data and vice versa
+            val downloadResult = farmRepository.downloadAllDataFromFirestore()
             
-            if (isEmpty) {
-                val downloadResult = farmRepository.downloadAllDataFromFirestore()
-                
-                if (downloadResult.isFailure) {
-                    return Result.failure(downloadResult.exceptionOrNull() ?: Exception("Download failed"))
-                }
+            if (downloadResult.isFailure) {
+                // Continue even if download fails (user can still use local data)
+                // Log the error but don't block login
             }
             
             Result.success(true)

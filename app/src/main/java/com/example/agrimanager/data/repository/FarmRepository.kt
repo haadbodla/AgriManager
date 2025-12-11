@@ -20,6 +20,7 @@ import javax.inject.Singleton
 @Singleton
 class FarmRepository @Inject constructor(
     private val dao: FarmDao,
+    private val userDao: UserDao,
     private val auth: FirebaseAuth,
     @ApplicationContext private val context: Context
 ) {
@@ -541,6 +542,24 @@ class FarmRepository @Inject constructor(
             ExpenseBreakdown(total, categories)
         }
     }
+    
+    fun getOverallTotalExpenses(): Flow<Double> {
+        return combine(
+            dao.getTotalFuelCostAllTime(),
+            dao.getTotalBillsAllTime(),
+            dao.getTotalLaborCostAllTime(),
+            dao.getTotalMaintenanceCostAllTime(),
+            dao.getTotalStockPurchasesAllTime()
+        ) { fuel, bills, labor, maintenance, stock ->
+            val fuelCost = fuel ?: 0.0
+            val billsCost = bills ?: 0.0
+            val laborCost = labor ?: 0.0
+            val maintenanceCost = maintenance ?: 0.0
+            val stockCost = stock ?: 0.0
+            
+            fuelCost + billsCost + laborCost + maintenanceCost + stockCost
+        }
+    }
 
     private fun getCurrentMonthRange(): Pair<Long, Long> {
         val calendar = Calendar.getInstance()
@@ -602,6 +621,12 @@ class FarmRepository @Inject constructor(
             
             try {
                 downloadEmployees(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+            
+            try {
+                downloadManagers(db, userId)
             } catch (e: Exception) {
                 // Silently continue on error
             }
@@ -749,6 +774,27 @@ class FarmRepository @Inject constructor(
                 baseSalary = data["baseSalary"] as? Double ?: 0.0
             )
             dao.insertEmployee(employee)
+        }
+    }
+    
+    private suspend fun downloadManagers(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("managers")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val manager = com.example.agrimanager.data.local.UserEntity(
+                uid = doc.id,  // Use Firestore doc ID
+                email = data["email"] as? String ?: "",
+                role = "manager",
+                farmOwnerId = userId,
+                addedAt = data["addedAt"] as? Long ?: System.currentTimeMillis(),
+                addedBy = data["addedBy"] as? String
+            )
+            userDao.insertUser(manager)
         }
     }
 

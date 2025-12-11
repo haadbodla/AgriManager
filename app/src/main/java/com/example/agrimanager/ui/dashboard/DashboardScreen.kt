@@ -11,9 +11,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.animation.core.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -25,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.components.ActivityComponent
 import com.example.agrimanager.utils.PermissionHelper
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,8 +42,10 @@ fun DashboardScreen(
     onMaintenanceClick: () -> Unit,
     onAnalyticsClick: () -> Unit,
     onManageUsersClick: () -> Unit,  // NEW: Navigate to user management
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     // Get PermissionHelper from Hilt
     val context = LocalContext.current
     val permissionHelper = remember {
@@ -61,16 +68,19 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text("AgriManager Dashboard", fontWeight = FontWeight.Bold)
-                        // NEW: Role Badge
-                        RoleBadge(permissionHelper = permissionHelper)
-                    }
+                    Text("AgriManager", fontWeight = FontWeight.Bold)
                 },
                 actions = {
+                    // Role Badge
+                    RoleBadge(permissionHelper = permissionHelper)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    // Refresh Button
+                    RefreshButton(
+                        isRefreshing = isRefreshing,
+                        onClick = { viewModel.refreshData() }
+                    )
+                    
                     IconButton(onClick = onLogoutClick) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
                     }
@@ -201,6 +211,38 @@ fun RoleBadge(
             color = Color.White,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+// NEW: Refresh Button Component
+@Composable
+fun RefreshButton(
+    isRefreshing: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (isRefreshing) 360f else 0f,
+        animationSpec = if (isRefreshing) {
+            infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            )
+        } else {
+            tween(0)
+        },
+        label = "refresh_rotation"
+    )
+    
+    IconButton(
+        onClick = onClick,
+        enabled = !isRefreshing
+    ) {
+        Icon(
+            imageVector = Icons.Default.Refresh,
+            contentDescription = if (isRefreshing) "Syncing..." else "Refresh Data",
+            modifier = Modifier.rotate(rotation)
         )
     }
 }

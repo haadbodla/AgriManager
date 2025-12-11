@@ -22,4 +22,12 @@ class AnalyticsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+    
+    val overallTotalExpenses: StateFlow<Double> = repository
+        .getOverallTotalExpenses()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0.0
+        )
 }

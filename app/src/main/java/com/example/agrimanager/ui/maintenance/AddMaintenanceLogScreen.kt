@@ -2,12 +2,14 @@ package com.example.agrimanager.ui.maintenance
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 
@@ -126,9 +128,21 @@ fun AddMaintenanceLogScreen(
             // Cost
             OutlinedTextField(
                 value = cost,
-                onValueChange = { cost = it },
+                onValueChange = { newValue ->
+                    // Allow digits and decimal point
+                    if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                        cost = newValue
+                    }
+                },
                 label = { Text("Cost") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = cost.isNotEmpty() && cost.toDoubleOrNull() == null,
+                supportingText = {
+                    if (cost.isNotEmpty() && cost.toDoubleOrNull() == null) {
+                        Text("Please enter a valid amount")
+                    }
+                }
             )
 
             // Mechanic Name

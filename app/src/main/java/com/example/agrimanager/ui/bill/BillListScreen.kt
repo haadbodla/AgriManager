@@ -14,12 +14,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.BillWithLocation
 import com.example.agrimanager.data.local.LocationEntity
+import com.example.agrimanager.utils.PermissionHelper
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -31,6 +35,15 @@ fun BillListScreen(
     onManageLocationsClick: () -> Unit,
     viewModel: BillViewModel = hiltViewModel()
 ) {
+    // Get PermissionHelper
+    val context = LocalContext.current
+    val permissionHelper = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
+    
     val bills by viewModel.allBills.collectAsState()
     val locations by viewModel.locations.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
@@ -45,7 +58,10 @@ fun BillListScreen(
                     IconButton(onClick = onManageLocationsClick) {
                         Icon(Icons.Default.LocationOn, contentDescription = "Manage Locations")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             )
         },
         floatingActionButton = {
@@ -73,7 +89,8 @@ fun BillListScreen(
                             editingBill = item
                             showDialog = true
                         },
-                        onDelete = { viewModel.deleteBill(item.bill.id, item.bill.locationId) }
+                        onDelete = { viewModel.deleteBill(item.bill.id, item.bill.locationId) },
+                        permissionHelper = permissionHelper
                     )
                 }
             }
@@ -105,7 +122,8 @@ fun BillListScreen(
 fun BillCard(
     item: BillWithLocation,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    permissionHelper: PermissionHelper
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -132,8 +150,10 @@ fun BillCard(
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, "Edit", tint = MaterialTheme.colorScheme.primary)
                     }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                    if (permissionHelper.canDelete(PermissionHelper.FEATURE_BILLS)) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
@@ -172,9 +192,15 @@ fun AddBillDialog(
     onDismiss: () -> Unit, 
     onConfirm: (Int, String, String) -> Unit
 ) {
+    val months = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    )
+    
     var month by remember(editingBill) { mutableStateOf(editingBill?.bill?.billingMonth ?: "") }
     var amount by remember(editingBill) { mutableStateOf(editingBill?.bill?.amount?.toString() ?: "") }
-    var expanded by remember { mutableStateOf(false) }
+    var locationExpanded by remember { mutableStateOf(false) }
+    var monthExpanded by remember { mutableStateOf(false) }
     var selectedLocation by remember(editingBill) { 
         mutableStateOf<LocationEntity?>(
             locations.find { it.id == editingBill?.bill?.locationId }
@@ -186,30 +212,66 @@ fun AddBillDialog(
         title = { Text(if (editingBill != null) "Edit Bill" else "Add Bill") },
         text = {
             Column {
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                // Location dropdown
+                ExposedDropdownMenuBox(
+                    expanded = locationExpanded, 
+                    onExpandedChange = { locationExpanded = !locationExpanded }
+                ) {
                     OutlinedTextField(
                         value = selectedLocation?.name ?: "Select Location",
                         onValueChange = {}, 
                         readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        label = { Text("Location") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = locationExpanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    ExposedDropdownMenu(
+                        expanded = locationExpanded, 
+                        onDismissRequest = { locationExpanded = false }
+                    ) {
                         locations.forEach { location ->
                             DropdownMenuItem(
                                 text = { Text(location.name) },
-                                onClick = { selectedLocation = location; expanded = false }
+                                onClick = { 
+                                    selectedLocation = location
+                                    locationExpanded = false 
+                                }
                             )
                         }
                     }
                 }
+                
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = month, 
-                    onValueChange = { month = it }, 
-                    label = { Text("Month") }, 
-                    modifier = Modifier.fillMaxWidth()
-                )
+                
+                // Month dropdown
+                ExposedDropdownMenuBox(
+                    expanded = monthExpanded,
+                    onExpandedChange = { monthExpanded = !monthExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = month.ifEmpty { "Select Month" },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Billing Month") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = monthExpanded,
+                        onDismissRequest = { monthExpanded = false }
+                    ) {
+                        months.forEach { monthName ->
+                            DropdownMenuItem(
+                                text = { Text(monthName) },
+                                onClick = {
+                                    month = monthName
+                                    monthExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = amount, 

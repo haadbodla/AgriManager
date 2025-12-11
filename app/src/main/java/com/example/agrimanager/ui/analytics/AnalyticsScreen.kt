@@ -28,6 +28,7 @@ fun AnalyticsScreen(
     viewModel: AnalyticsViewModel = hiltViewModel()
 ) {
     val breakdown by viewModel.expenseBreakdown.collectAsState()
+    val overallTotal by viewModel.overallTotalExpenses.collectAsState()
 
     Scaffold(
         topBar = {
@@ -53,8 +54,11 @@ fun AnalyticsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             breakdown?.let { data ->
-                // Total Expenses Card
+                // Total Expenses Card (This Month)
                 TotalExpensesCard(totalExpenses = data.totalExpenses)
+                
+                // Overall Total Expenses Card (All Time)
+                OverallTotalExpensesCard(totalExpenses = overallTotal)
 
                 // Pie Chart (Simple visual representation)
                 if (data.categories.isNotEmpty()) {
@@ -102,6 +106,11 @@ fun TotalExpensesCard(totalExpenses: Double) {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
     }
+    
+    // Get current month and year
+    val calendar = Calendar.getInstance()
+    val monthName = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
+    val year = calendar.get(Calendar.YEAR)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -116,7 +125,14 @@ fun TotalExpensesCard(totalExpenses: Double) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Total Expenses This Month",
+                text = "$monthName $year",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Total Expenses",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -127,6 +143,48 @@ fun TotalExpensesCard(totalExpenses: Double) {
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+fun OverallTotalExpensesCard(totalExpenses: Double) {
+    val formatter = NumberFormat.getNumberInstance(Locale("en", "IN")).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Overall Total",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "All Time Expenses",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Rs. " + formatter.format(totalExpenses),
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary
             )
         }
     }

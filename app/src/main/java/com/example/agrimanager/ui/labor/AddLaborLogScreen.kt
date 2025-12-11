@@ -2,12 +2,14 @@ package com.example.agrimanager.ui.labor
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -93,9 +95,21 @@ fun AddLaborLogScreen(
             // Labor Count
             OutlinedTextField(
                 value = laborCount,
-                onValueChange = { laborCount = it },
+                onValueChange = { newValue ->
+                    // Only allow digits
+                    if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                        laborCount = newValue
+                    }
+                },
                 label = { Text("Labor Count") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = laborCount.isNotEmpty() && (laborCount.toIntOrNull() == null || laborCount.toIntOrNull()!! <= 0),
+                supportingText = {
+                    if (laborCount.isNotEmpty() && (laborCount.toIntOrNull() == null || laborCount.toIntOrNull()!! <= 0)) {
+                        Text("Labor count must be greater than 0")
+                    }
+                }
             )
 
             // Work Type
@@ -133,9 +147,21 @@ fun AddLaborLogScreen(
             // Total Bill Amount
             OutlinedTextField(
                 value = totalAmount,
-                onValueChange = { totalAmount = it },
+                onValueChange = { newValue ->
+                    // Only allow digits
+                    if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                        totalAmount = newValue
+                    }
+                },
                 label = { Text("Total Bill Amount") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = totalAmount.isNotEmpty() && totalAmount.toIntOrNull() == null,
+                supportingText = {
+                    if (totalAmount.isNotEmpty() && totalAmount.toIntOrNull() == null) {
+                        Text("Please enter a valid amount")
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -145,9 +171,9 @@ fun AddLaborLogScreen(
                 onClick = {
                     val empId = selectedEmployeeId
                     val count = laborCount.toIntOrNull()
-                    val amount = totalAmount.toDoubleOrNull()
+                    val amount = totalAmount.toIntOrNull()?.toDouble()
                     
-                    if (empId != null && count != null && amount != null && selectedWorkType.isNotEmpty()) {
+                    if (empId != null && count != null && count > 0 && amount != null && selectedWorkType.isNotEmpty()) {
                         if (isEditMode) {
                             viewModel.updateLaborLog(logId!!, empId, count, selectedWorkType, amount)
                         } else {
@@ -159,8 +185,9 @@ fun AddLaborLogScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = selectedEmployeeId != null && 
                          laborCount.toIntOrNull() != null && 
+                         laborCount.toIntOrNull()!! > 0 && 
                          selectedWorkType.isNotEmpty() && 
-                         totalAmount.toDoubleOrNull() != null
+                         totalAmount.toIntOrNull() != null
             ) {
                 Text(if (isEditMode) "Update Log" else "Save Log")
             }
