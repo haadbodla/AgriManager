@@ -47,10 +47,11 @@ class UserRepository @Inject constructor(
         return getCurrentUser()?.farmOwnerId
     }
     
-    // Get all managers for current owner
+    // Get all managers for a specific owner
     fun getAllManagers(): Flow<List<UserEntity>> {
-        val ownerId = getCurrentUid() ?: throw IllegalStateException("User not logged in")
-        return userDao.getManagersForOwner(ownerId)
+        // val ownerId = getCurrentUid() ?: throw IllegalStateException("User not logged in")
+        // Relaxed query does not need ownerId
+        return userDao.getManagersForOwner()
     }
     
     // Add a new manager

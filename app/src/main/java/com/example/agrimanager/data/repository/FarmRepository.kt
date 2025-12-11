@@ -596,8 +596,36 @@ class FarmRepository @Inject constructor(
     /**
      * Download all user data from Firestore and insert into local database
      */
+    private fun parseInt(value: Any?): Int {
+        return when (value) {
+            is Number -> value.toInt()
+            is String -> value.toIntOrNull() ?: 0
+            else -> 0
+        }
+    }
+
+    private fun parseLong(value: Any?): Long {
+        return when (value) {
+            is Number -> value.toLong()
+            is String -> value.toLongOrNull() ?: 0L
+            else -> 0L
+        }
+    }
+
+    private fun parseDouble(value: Any?): Double {
+        return when (value) {
+            is Number -> value.toDouble()
+            is String -> value.toDoubleOrNull() ?: 0.0
+            else -> 0.0
+        }
+    }
+
     suspend fun downloadAllDataFromFirestore(): Result<Boolean> {
-        val userId = auth.currentUser?.uid ?: return Result.failure(Exception("Not logged in"))
+        // CHANGED: Use Farm Owner ID for all data access
+        // This ensures managers download data from the Owner's collection, not their empty one
+        val prefs = context.getSharedPreferences("agri_manager_prefs", Context.MODE_PRIVATE) // Quick access context-based
+        val farmOwnerId = prefs.getString("farm_owner_id", null)
+        val userId = farmOwnerId ?: auth.currentUser?.uid ?: return Result.failure(Exception("Not logged in"))
         
         return try {
             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
@@ -691,10 +719,14 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            // FIX: Use Number to handle both Int and Long from Firestore
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val machine = MachineEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
+                id = effectiveId,
                 name = data["name"] as? String ?: "",
-                dateAdded = data["dateAdded"] as? Long ?: System.currentTimeMillis()
+                dateAdded = parseLong(data["dateAdded"])
             )
             dao.insertMachine(machine)
         }
@@ -709,14 +741,17 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val log = FuelLogEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
-                machineId = (data["machineId"] as? Long)?.toInt() ?: 0,
-                date = data["date"] as? Long ?: 0L,
-                liters = data["liters"] as? Double ?: 0.0,
-                rate = data["rate"] as? Double ?: 0.0,
-                totalCost = data["totalCost"] as? Double ?: 0.0,
-                hourMeterReading = (data["hourMeterReading"] as? Long)?.toInt() ?: 0
+                id = effectiveId,
+                machineId = parseInt(data["machineId"]),
+                date = parseLong(data["date"]),
+                liters = parseDouble(data["liters"]),
+                rate = parseDouble(data["rate"]),
+                totalCost = parseDouble(data["totalCost"]),
+                hourMeterReading = parseInt(data["hourMeterReading"])
             )
             dao.insertFuelLog(log)
         }
@@ -731,12 +766,15 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val bill = BillEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
-                locationId = (data["locationId"] as? Long)?.toInt() ?: 0,
+                id = effectiveId,
+                locationId = parseInt(data["locationId"]),
                 billingMonth = data["billingMonth"] as? String ?: "",
-                amount = data["amount"] as? Double ?: 0.0,
-                dateAdded = data["dateAdded"] as? Long ?: 0L
+                amount = parseDouble(data["amount"]),
+                dateAdded = parseLong(data["dateAdded"])
             )
             dao.insertBill(bill)
         }
@@ -751,8 +789,11 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val location = LocationEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
+                id = effectiveId,
                 name = data["name"] as? String ?: ""
             )
             dao.insertLocation(location)
@@ -768,10 +809,13 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val employee = EmployeeEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
+                id = effectiveId,
                 name = data["name"] as? String ?: "",
-                baseSalary = data["baseSalary"] as? Double ?: 0.0
+                baseSalary = parseDouble(data["baseSalary"])
             )
             dao.insertEmployee(employee)
         }
@@ -787,11 +831,11 @@ class FarmRepository @Inject constructor(
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
             val manager = com.example.agrimanager.data.local.UserEntity(
-                uid = doc.id,  // Use Firestore doc ID
-                email = data["email"] as? String ?: "",
+                uid = doc.id,
+                email = data["email"] as? String ?: "No Email",
                 role = "manager",
                 farmOwnerId = userId,
-                addedAt = data["addedAt"] as? Long ?: System.currentTimeMillis(),
+                addedAt = parseLong(data["addedAt"]),
                 addedBy = data["addedBy"] as? String
             )
             userDao.insertUser(manager)
@@ -807,12 +851,15 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val transaction = TransactionEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
-                employeeId = (data["employeeId"] as? Long)?.toInt() ?: 0,
-                amount = data["amount"] as? Double ?: 0.0,
+                id = effectiveId,
+                employeeId = parseInt(data["employeeId"]),
+                amount = parseDouble(data["amount"]),
                 type = data["type"] as? String ?: "DEBIT",
-                timestamp = data["timestamp"] as? Long ?: 0L
+                timestamp = parseLong(data["timestamp"])
             )
             dao.insertTransaction(transaction)
         }
@@ -827,14 +874,17 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val item = InventoryItemEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
+                id = effectiveId,
                 name = data["name"] as? String ?: "",
                 category = data["category"] as? String ?: "",
                 unit = data["unit"] as? String ?: "",
-                currentQuantity = data["currentQuantity"] as? Double ?: 0.0,
-                reorderLevel = data["reorderLevel"] as? Double ?: 0.0,
-                dateAdded = data["dateAdded"] as? Long ?: 0L
+                currentQuantity = parseDouble(data["currentQuantity"]),
+                reorderLevel = parseDouble(data["reorderLevel"]),
+                dateAdded = parseLong(data["dateAdded"])
             )
             dao.insertInventoryItem(item)
         }
@@ -849,15 +899,18 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val transaction = StockTransactionEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
-                itemId = (data["itemId"] as? Long)?.toInt() ?: 0,
+                id = effectiveId,
+                itemId = parseInt(data["itemId"]),
                 type = data["type"] as? String ?: "IN",
-                quantity = data["quantity"] as? Double ?: 0.0,
-                totalCost = data["totalCost"] as? Double ?: 0.0,
-                date = data["date"] as? Long ?: 0L,
-                locationId = (data["locationId"] as? Long)?.toInt(),
-                employeeId = (data["employeeId"] as? Long)?.toInt()
+                quantity = parseDouble(data["quantity"]),
+                totalCost = parseDouble(data["totalCost"]),
+                date = parseLong(data["date"]),
+                locationId = parseInt(data["locationId"]).takeIf { it != 0 },
+                employeeId = parseInt(data["employeeId"]).takeIf { it != 0 }
             )
             dao.insertStockTransaction(transaction)
         }
@@ -873,13 +926,17 @@ class FarmRepository @Inject constructor(
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
             try {
+                // FIX: If stored ID is 0, use hashCode of document ID to ensure uniqueness
+                val storedId = parseInt(data["id"])
+                val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
                 val log = LaborLogEntity(
-                    id = (data["id"] as? Long)?.toInt() ?: 0,
-                    employeeId = (data["employeeId"] as? Long)?.toInt() ?: 0,
-                    laborCount = (data["laborCount"] as? Long)?.toInt() ?: 0,
+                    id = effectiveId,
+                    employeeId = parseInt(data["employeeId"]),
+                    laborCount = parseInt(data["laborCount"]),
                     workType = data["workType"] as? String ?: "",
-                    totalAmount = data["totalAmount"] as? Double ?: 0.0,
-                    date = data["date"] as? Long ?: 0L
+                    totalAmount = parseDouble(data["totalAmount"]),
+                    date = parseLong(data["date"])
                 )
                 dao.insertLaborLog(log)
             } catch (e: Exception) {
@@ -897,14 +954,17 @@ class FarmRepository @Inject constructor(
         
         snapshot.documents.forEach { doc ->
             val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
             val log = MaintenanceLogEntity(
-                id = (data["id"] as? Long)?.toInt() ?: 0,
-                machineId = (data["machineId"] as? Long)?.toInt() ?: 0,
+                id = effectiveId,
+                machineId = parseInt(data["machineId"]),
                 tag = data["tag"] as? String ?: "",
-                cost = data["cost"] as? Double ?: 0.0,
+                cost = parseDouble(data["cost"]),
                 mechanicName = data["mechanicName"] as? String ?: "",
                 description = data["description"] as? String ?: "",
-                date = data["date"] as? Long ?: 0L
+                date = parseLong(data["date"])
             )
             dao.insertMaintenanceLog(log)
         }

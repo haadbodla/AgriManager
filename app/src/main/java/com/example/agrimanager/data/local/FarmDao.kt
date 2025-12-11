@@ -114,9 +114,15 @@ interface FarmDao {
     suspend fun getBillById(id: Int): BillEntity?
 
     @Query("""
-        SELECT bills.*, locations.name as location_name 
+        SELECT 
+            bills.bill_id,
+            bills.location_id,
+            bills.billing_month,
+            bills.amount,
+            bills.date_added,
+            COALESCE(locations.name, 'Unknown Location') as location_name 
         FROM bills 
-        INNER JOIN locations ON bills.location_id = locations.location_id 
+        LEFT JOIN locations ON bills.location_id = locations.location_id 
         ORDER BY bills.date_added DESC
     """)
     fun getAllBillsWithLocation(): Flow<List<BillWithLocation>>
@@ -179,13 +185,13 @@ interface FarmDao {
         SELECT 
             l.log_id as id,
             l.employee_id as employeeId,
-            e.name as employeeName,
+            COALESCE(e.name, 'Unknown Employee') as employeeName,
             l.labor_count as laborCount,
             l.work_type as workType,
             l.total_amount as totalAmount,
             l.date as date
         FROM labor_logs l
-        INNER JOIN employees e ON l.employee_id = e.id
+        LEFT JOIN employees e ON l.employee_id = e.id
         ORDER BY l.date DESC
     """)
     fun getAllLaborLogsWithEmployee(): Flow<List<LaborLogWithEmployee>>
@@ -213,14 +219,14 @@ interface FarmDao {
         SELECT 
             m.log_id as id,
             m.machine_id as machineId,
-            ma.name as machineName,
+            COALESCE(ma.name, 'Unknown Machine') as machineName,
             m.tag as tag,
             m.cost as cost,
             m.mechanic_name as mechanicName,
             m.description as description,
             m.date as date
         FROM maintenance_logs m
-        INNER JOIN machines ma ON m.machine_id = ma.machine_id
+        LEFT JOIN machines ma ON m.machine_id = ma.machine_id
         ORDER BY m.date DESC
     """)
     fun getAllMaintenanceLogsWithMachine(): Flow<List<MaintenanceLogWithMachine>>

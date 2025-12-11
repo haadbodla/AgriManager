@@ -440,9 +440,26 @@ fun StockOutDialog(
             ) {
                 OutlinedTextField(
                     value = quantity,
-                    onValueChange = { quantity = it },
+                    onValueChange = { newValue ->
+                        // Allow digits and decimal point only
+                        if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                            quantity = newValue
+                        }
+                    },
                     label = { Text("Quantity (${item.unit})") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = quantity.isNotEmpty() && (quantity.toDoubleOrNull() == null || (quantity.toDoubleOrNull() ?: 0.0) <= 0),
+                    supportingText = {
+                        if (quantity.isNotEmpty()) {
+                             val qty = quantity.toDoubleOrNull()
+                             if (qty == null) {
+                                 Text("Please enter a valid number")
+                             } else if (qty <= 0) {
+                                 Text("Quantity must be greater than 0")
+                             }
+                        }
+                    }
                 )
 
                 // Where used? dropdown
@@ -518,7 +535,7 @@ fun StockOutDialog(
                         onConfirm(qty, selectedLocationId!!, selectedEmployeeId!!)
                     }
                 },
-                enabled = quantity.toDoubleOrNull() != null && 
+                enabled = (quantity.toDoubleOrNull() ?: 0.0) > 0 && 
                          selectedLocationId != null && 
                          selectedEmployeeId != null
             ) {

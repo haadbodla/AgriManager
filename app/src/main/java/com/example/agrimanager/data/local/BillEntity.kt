@@ -6,15 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "bills",
-    foreignKeys = [
-        ForeignKey(
-            entity = LocationEntity::class,
-            parentColumns = ["location_id"],
-            childColumns = ["location_id"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
+    tableName = "bills"
 )
 data class BillEntity(
     @PrimaryKey(autoGenerate = true)

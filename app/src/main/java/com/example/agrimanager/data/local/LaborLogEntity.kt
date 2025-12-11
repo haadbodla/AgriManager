@@ -6,15 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "labor_logs",
-    foreignKeys = [
-        ForeignKey(
-            entity = EmployeeEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["employee_id"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
+    tableName = "labor_logs"
 )
 data class LaborLogEntity(
     @PrimaryKey(autoGenerate = true)

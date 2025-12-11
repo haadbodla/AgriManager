@@ -31,12 +31,13 @@ interface UserDao {
     suspend fun getUserByEmail(email: String): UserEntity?
     
     // Get all managers for a specific owner
-    @Query("SELECT * FROM users WHERE farmOwnerId = :ownerId AND role = 'manager' ORDER BY addedAt DESC")
-    fun getManagersForOwner(ownerId: String): Flow<List<UserEntity>>
+    // MODIFIED: temporarily removed farmOwnerId check to debug visibility issues
+    @Query("SELECT * FROM users WHERE role = 'manager' ORDER BY addedAt DESC")
+    fun getManagersForOwner(): Flow<List<UserEntity>>
     
     // Get all managers for a specific owner (non-Flow for one-time queries)
-    @Query("SELECT * FROM users WHERE farmOwnerId = :ownerId AND role = 'manager' ORDER BY addedAt DESC")
-    suspend fun getManagersForOwnerList(ownerId: String): List<UserEntity>
+    @Query("SELECT * FROM users WHERE role = 'manager' ORDER BY addedAt DESC")
+    suspend fun getManagersForOwnerList(): List<UserEntity>
     
     // Check if user exists
     @Query("SELECT COUNT(*) FROM users WHERE uid = :uid")
