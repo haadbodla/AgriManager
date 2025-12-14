@@ -42,6 +42,7 @@ fun DashboardScreen(
     onMaintenanceClick: () -> Unit,
     onAnalyticsClick: () -> Unit,
     onManageUsersClick: () -> Unit,  // NEW: Navigate to user management
+    onExportClick: () -> Unit,  // NEW: Navigate to export
     onLogoutClick: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
@@ -152,6 +153,23 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Manage Users", fontSize = 16.sp)
                 }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            
+            // Export Button (Both Owner and Manager can access)
+            Button(
+                onClick = onExportClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50)  // Green color
+                )
+            ) {
+                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Export Data to PDF", fontSize = 16.sp)
             }
         }
     }

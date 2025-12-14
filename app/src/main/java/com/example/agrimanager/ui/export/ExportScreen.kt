@@ -1,0 +1,200 @@
+package com.example.agrimanager.ui.export
+
+import android.content.Intent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.agrimanager.data.models.ExportConfig
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExportScreen(
+    onNavigateBack: () -> Unit,
+    viewModel: ExportViewModel = hiltViewModel()
+) {
+    val exportState by viewModel.exportState.collectAsState()
+    val config by viewModel.config.collectAsState()
+    val context = LocalContext.current
+    
+    var showAllData by remember { mutableStateOf(true) }
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Export Data") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Export type selection
+            Card {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Select Data", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = showAllData,
+                            onClick = { 
+                                showAllData = true
+                                viewModel.updateConfig(ExportConfig(includeAll = true))
+                            }
+                        )
+                        Text("All Data (Complete Report)")
+                    }
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = !showAllData,
+                            onClick = { showAllData = false }
+                        )
+                        Text("Custom Selection")
+                    }
+                }
+            }
+            
+            // Custom selection checkboxes
+            if (!showAllData) {
+                Card {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        DataCheckbox("Machines & Fuel", config.includeMachines) {
+                            viewModel.updateConfig(config.copy(includeMachines = it, includeFuel = it))
+                        }
+                        DataCheckbox("Employees & Salary", config.includeEmployees) {
+                            viewModel.updateConfig(config.copy(includeEmployees = it, includeSalary = it))
+                        }
+                        DataCheckbox("Locations & Bills", config.includeLocations) {
+                            viewModel.updateConfig(config.copy(includeLocations = it, includeBills = it))
+                        }
+                        DataCheckbox("Inventory & Stock", config.includeInventory) {
+                            viewModel.updateConfig(config.copy(includeInventory = it))
+                        }
+                        DataCheckbox("Labor Logs", config.includeLabor) {
+                            viewModel.updateConfig(config.copy(includeLabor = it))
+                        }
+                        DataCheckbox("Maintenance Logs", config.includeMaintenance) {
+                            viewModel.updateConfig(config.copy(includeMaintenance = it))
+                        }
+                        DataCheckbox("Analytics Summary", config.includeAnalytics) {
+                            viewModel.updateConfig(config.copy(includeAnalytics = it))
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Export button
+            Button(
+                onClick = { viewModel.exportToPdf() },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                enabled = exportState !is ExportState.Loading
+            ) {
+                if (exportState is ExportState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Generating PDF...")
+                } else {
+                    Icon(Icons.Default.PictureAsPdf, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Export to PDF")
+                }
+            }
+        }
+    }
+    
+    // Success/Error dialogs
+    when (val state = exportState) {
+        is ExportState.Success -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.resetState() },
+                icon = { Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) },
+                title = { Text("Export Successful!") },
+                text = { 
+                    Column {
+                        Text("PDF saved to Downloads folder:")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(state.file.name, style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        val uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.provider",
+                            state.file
+                        )
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "application/pdf")
+                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Open PDF"))
+                        viewModel.resetState()
+                        onNavigateBack()
+                    }) {
+                        Text("Open PDF")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        viewModel.resetState()
+                        onNavigateBack()
+                    }) {
+                        Text("Done")
+                    }
+                }
+            )
+        }
+        is ExportState.Error -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.resetState() },
+                icon = { Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error) },
+                title = { Text("Export Failed") },
+                text = { Text(state.message) },
+                confirmButton = {
+                    Button(onClick = { viewModel.resetState() }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        else -> {}
+    }
+}
+
+@Composable
+fun DataCheckbox(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(label)
+    }
+}

@@ -26,6 +26,7 @@ import com.example.agrimanager.ui.maintenance.AddMaintenanceLogScreen
 import com.example.agrimanager.ui.maintenance.MaintenanceListScreen
 import com.example.agrimanager.ui.inventory.InventoryDetailScreen
 import com.example.agrimanager.ui.analytics.AnalyticsScreen
+import com.example.agrimanager.ui.export.ExportScreen  // NEW: Import ExportScreen
 import com.example.agrimanager.ui.users.UserManagementScreen  // NEW: Import UserManagementScreen
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
@@ -84,6 +85,7 @@ class MainActivity : ComponentActivity() {
                         onMaintenanceClick = { navController.navigate("maintenance_list") },
                         onAnalyticsClick = { navController.navigate("analytics") },
                         onManageUsersClick = { navController.navigate("user_management") },  // NEW: Navigate to user management
+                        onExportClick = { navController.navigate("export") },  // NEW: Navigate to export
                         onLogoutClick = {
                             authRepository.signOut()
                             navController.navigate("login") {
@@ -216,6 +218,11 @@ class MainActivity : ComponentActivity() {
                 // NEW: User Management Screen (Owner only)
                 composable("user_management") {
                     UserManagementScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                
+                // NEW: Export Screen (Both Owner and Manager)
+                composable("export") {
+                    ExportScreen(onNavigateBack = { navController.popBackStack() })
                 }
             }
 

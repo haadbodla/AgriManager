@@ -12,11 +12,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.agrimanager.data.local.LocationEntity
+import com.example.agrimanager.utils.PermissionHelper
+import dagger.hilt.android.EntryPointAccessors
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,6 +29,15 @@ fun LocationListScreen(
     navController: NavController,
     viewModel: LocationViewModel = hiltViewModel()
 ) {
+    // Get PermissionHelper
+    val context = LocalContext.current
+    val permissionHelper = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
+    
     val locations by viewModel.locations.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -80,7 +93,8 @@ fun LocationListScreen(
                         onDelete = {
                             locationToDelete = location
                             showDeleteDialog = true
-                        }
+                        },
+                        permissionHelper = permissionHelper
                     )
                 }
             }
@@ -136,7 +150,8 @@ private fun LocationCard(
     location: LocationEntity,
     onClick: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    permissionHelper: PermissionHelper
 ) {
     Card(
         onClick = onClick,
@@ -164,13 +179,15 @@ private fun LocationCard(
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-            // Delete button
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Location",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            // Delete button - Only visible to owners
+            if (permissionHelper.canDelete(PermissionHelper.FEATURE_LOCATIONS)) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Location",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }

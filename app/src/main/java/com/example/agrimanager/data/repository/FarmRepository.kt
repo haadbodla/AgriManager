@@ -11,6 +11,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 import java.util.concurrent.TimeUnit // <--- Crucial import for time
@@ -968,6 +969,110 @@ class FarmRepository @Inject constructor(
             )
             dao.insertMaintenanceLog(log)
         }
+    }
+    
+    // ================== PDF EXPORT ==================
+    
+    suspend fun getExportData(config: com.example.agrimanager.data.models.ExportConfig): com.example.agrimanager.data.models.ExportData {
+        val prefs = context.getSharedPreferences("agri_manager_prefs", android.content.Context.MODE_PRIVATE)
+        val userEmail = prefs.getString("user_email", "Unknown") ?: "Unknown"
+        val userRole = prefs.getString("user_role", "Unknown") ?: "Unknown"
+        
+        val startDate = config.startDate ?: 0L
+        val endDate = config.endDate ?: System.currentTimeMillis()
+        
+        val dateRange = if (config.startDate != null && config.endDate != null) {
+            "${java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(startDate))} to ${java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(endDate))}"
+        } else null
+        
+        return com.example.agrimanager.data.models.ExportData(
+            farmName = "AgriManager Farm",
+            exportDate = System.currentTimeMillis(),
+            generatedBy = userEmail,
+            userRole = userRole.replaceFirstChar { it.uppercase() },
+            dateRange = dateRange,
+            
+            machines = if (config.includeMachines) {
+                dao.getAllMachines().first()
+            } else null,
+            
+            fuelLogs = if (config.includeFuel) {
+                if (config.startDate != null) {
+                    dao.getFuelLogsByDateRange(startDate, endDate)
+                } else {
+                    // Get all fuel logs by using very old start date
+                    dao.getFuelLogsByDateRange(0L, System.currentTimeMillis())
+                }
+            } else null,
+            
+            employees = if (config.includeEmployees) {
+                dao.getAllEmployees().first()
+            } else null,
+            
+            transactions = if (config.includeSalary) {
+                if (config.startDate != null) {
+                    dao.getTransactionsByDateRange(startDate, endDate)
+                } else {
+                    dao.getTransactionsByDateRange(0L, System.currentTimeMillis())
+                }
+            } else null,
+            
+            locations = if (config.includeLocations) {
+                dao.getAllLocations().first()
+            } else null,
+            
+            bills = if (config.includeBills) {
+                if (config.startDate != null) {
+                    // Get bills with location info
+                    val billEntities = dao.getBillsByDateRange(startDate, endDate)
+                    billEntities.map { bill ->
+                        val location = dao.getLocationById(bill.locationId)
+                        BillWithLocation(
+                            bill = bill,
+                            locationName = location?.name ?: "Unknown Location"
+                        )
+                    }
+                } else {
+                    dao.getAllBillsWithLocation().first()
+                }
+            } else null,
+            
+            inventoryItems = if (config.includeInventory) {
+                dao.getAllInventoryItems().first()
+            } else null,
+            
+            stockTransactions = if (config.includeInventory) {
+                if (config.startDate != null) {
+                    dao.getStockTransactionsByDateRange(startDate, endDate)
+                } else {
+                    dao.getStockTransactionsByDateRange(0L, System.currentTimeMillis())
+                }
+            } else null,
+            
+            laborLogs = if (config.includeLabor) {
+                if (config.startDate != null) {
+                    dao.getLaborLogsByDateRange(startDate, endDate)
+                } else {
+                    dao.getAllLaborLogsWithEmployee().first()
+                }
+            } else null,
+            
+            maintenanceLogs = if (config.includeMaintenance) {
+                if (config.startDate != null) {
+                    dao.getMaintenanceLogsByDateRange(startDate, endDate)
+                } else {
+                    dao.getAllMaintenanceLogsWithMachine().first()
+                }
+            } else null,
+            
+            analytics = if (config.includeAnalytics) {
+                try {
+                    getMonthlyExpenseBreakdown().first()
+                } catch (e: Exception) {
+                    null
+                }
+            } else null
+        )
     }
 
 }

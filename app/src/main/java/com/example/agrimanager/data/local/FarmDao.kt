@@ -304,4 +304,67 @@ interface FarmDao {
 
     @Query("SELECT COUNT(*) FROM locations")
     suspend fun getLocationCount(): Int
+    
+    // ================== PDF EXPORT QUERIES (DATE RANGE) ==================
+    
+    @Query("""
+        SELECT * FROM fuel_logs 
+        WHERE date >= :startDate AND date <= :endDate 
+        ORDER BY date DESC
+    """)
+    suspend fun getFuelLogsByDateRange(startDate: Long, endDate: Long): List<FuelLogEntity>
+    
+    @Query("""
+        SELECT * FROM bills 
+        WHERE date_added >= :startDate AND date_added <= :endDate 
+        ORDER BY date_added DESC
+    """)
+    suspend fun getBillsByDateRange(startDate: Long, endDate: Long): List<BillEntity>
+    
+    @Query("""
+        SELECT * FROM transactions 
+        WHERE timestamp >= :startDate AND timestamp <= :endDate 
+        ORDER BY timestamp DESC
+    """)
+    suspend fun getTransactionsByDateRange(startDate: Long, endDate: Long): List<TransactionEntity>
+    
+    @Query("""
+        SELECT 
+            l.log_id as id,
+            l.employee_id as employeeId,
+            COALESCE(e.name, 'Unknown Employee') as employeeName,
+            l.labor_count as laborCount,
+            l.work_type as workType,
+            l.total_amount as totalAmount,
+            l.date as date
+        FROM labor_logs l
+        LEFT JOIN employees e ON l.employee_id = e.id
+        WHERE l.date >= :startDate AND l.date <= :endDate
+        ORDER BY l.date DESC
+    """)
+    suspend fun getLaborLogsByDateRange(startDate: Long, endDate: Long): List<LaborLogWithEmployee>
+    
+    @Query("""
+        SELECT 
+            m.log_id as id,
+            m.machine_id as machineId,
+            COALESCE(ma.name, 'Unknown Machine') as machineName,
+            m.tag as tag,
+            m.cost as cost,
+            m.mechanic_name as mechanicName,
+            m.description as description,
+            m.date as date
+        FROM maintenance_logs m
+        LEFT JOIN machines ma ON m.machine_id = ma.machine_id
+        WHERE m.date >= :startDate AND m.date <= :endDate
+        ORDER BY m.date DESC
+    """)
+    suspend fun getMaintenanceLogsByDateRange(startDate: Long, endDate: Long): List<MaintenanceLogWithMachine>
+    
+    @Query("""
+        SELECT * FROM stock_transactions 
+        WHERE date >= :startDate AND date <= :endDate 
+        ORDER BY date DESC
+    """)
+    suspend fun getStockTransactionsByDateRange(startDate: Long, endDate: Long): List<StockTransactionEntity>
 }
