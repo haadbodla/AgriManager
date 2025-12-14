@@ -47,6 +47,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val syncStatus by viewModel.syncStatus.collectAsState()
     // Get PermissionHelper from Hilt
     val context = LocalContext.current
     val permissionHelper = remember {
@@ -95,7 +96,11 @@ fun DashboardScreen(
                 actions = {
                     // Role Badge
                     RoleBadge(permissionHelper = permissionHelper)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    // Sync Status Indicator
+                    SyncStatusIndicator(syncStatus = syncStatus)
+                    Spacer(modifier = Modifier.width(4.dp))
                     
                     // Refresh Button
                     RefreshButton(
@@ -297,3 +302,56 @@ data class DashboardItem(
     val icon: ImageVector,
     val onClick: () -> Unit
 )
+
+// Sync Status Indicator Composable
+@Composable
+fun SyncStatusIndicator(
+    syncStatus: com.example.agrimanager.utils.SyncStatus,
+    modifier: Modifier = Modifier
+) {
+    val (icon, color, text) = when (syncStatus) {
+        is com.example.agrimanager.utils.SyncStatus.Synced -> Triple(
+            Icons.Default.CloudDone,
+            Color(0xFF4CAF50), // Green
+            "Synced"
+        )
+        is com.example.agrimanager.utils.SyncStatus.Pending -> Triple(
+            Icons.Default.CloudUpload,
+            Color(0xFFFF9800), // Orange
+            "Pending (${syncStatus.count})"
+        )
+        is com.example.agrimanager.utils.SyncStatus.Syncing -> Triple(
+            Icons.Default.Cloud,
+            Color(0xFF2196F3), // Blue
+            "Syncing..."
+        )
+        is com.example.agrimanager.utils.SyncStatus.Offline -> Triple(
+            Icons.Default.CloudOff,
+            Color(0xFF9E9E9E), // Gray
+            "Offline"
+        )
+    }
+    
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .background(
+                color = color.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = text,
+            tint = color,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = color
+        )
+    }
+}

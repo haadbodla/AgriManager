@@ -94,6 +94,8 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
 
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.concurrent:concurrent-futures-ktx:1.1.0")
+    implementation("com.google.guava:guava:31.1-android")
 
     // Vico Charts for Compose
     implementation("com.patrykandpatrick.vico:compose:1.13.1")

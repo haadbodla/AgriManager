@@ -57,6 +57,7 @@ class FarmRepository @Inject constructor(
         val syncRequest = OneTimeWorkRequestBuilder<FirestoreSyncWorker>()
             .setConstraints(constraints)
             .setInputData(builder.build())
+            .addTag("firestore_sync")  // Tag for sync status tracking
             .setBackoffCriteria(
                 BackoffPolicy.EXPONENTIAL,
                 WorkRequest.MIN_BACKOFF_MILLIS, // <--- FIXED: Use WorkRequest class
