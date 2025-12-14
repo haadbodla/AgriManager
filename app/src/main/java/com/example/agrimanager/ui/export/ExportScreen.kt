@@ -2,6 +2,8 @@ package com.example.agrimanager.ui.export
 
 import android.content.Intent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -25,6 +27,8 @@ fun ExportScreen(
     val context = LocalContext.current
     
     var showAllData by remember { mutableStateOf(true) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -45,6 +49,7 @@ fun ExportScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -71,6 +76,64 @@ fun ExportScreen(
                             onClick = { showAllData = false }
                         )
                         Text("Custom Selection")
+                    }
+                }
+            }
+            
+            // Date Range Filter
+            Card {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Checkbox(
+                            checked = config.startDate != null,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    // Set to last 30 days by default
+                                    val endDate = System.currentTimeMillis()
+                                    val startDate = endDate - (30L * 24 * 60 * 60 * 1000)
+                                    viewModel.updateConfig(config.copy(startDate = startDate, endDate = endDate))
+                                } else {
+                                    viewModel.updateConfig(config.copy(startDate = null, endDate = null))
+                                }
+                            }
+                        )
+                        Text("Filter by Date Range", style = MaterialTheme.typography.titleMedium)
+                    }
+                    
+                    if (config.startDate != null && config.endDate != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Start Date Button
+                        OutlinedButton(
+                            onClick = { showStartDatePicker = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Start: ${java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(config.startDate!!))}")
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // End Date Button
+                        OutlinedButton(
+                            onClick = { showEndDatePicker = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("End: ${java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(config.endDate!!))}")
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Note: Only fuel logs, bills, transactions, labor, maintenance, and stock transactions will be filtered by date.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -184,6 +247,59 @@ fun ExportScreen(
             )
         }
         else -> {}
+    }
+    
+    // Date Picker Dialogs
+    if (showStartDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = config.startDate ?: System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { selectedDate ->
+                        viewModel.updateConfig(config.copy(startDate = selectedDate))
+                    }
+                    showStartDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStartDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+    
+    if (showEndDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = config.endDate ?: System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { selectedDate ->
+                        viewModel.updateConfig(config.copy(endDate = selectedDate))
+                    }
+                    showEndDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
     }
 }
 

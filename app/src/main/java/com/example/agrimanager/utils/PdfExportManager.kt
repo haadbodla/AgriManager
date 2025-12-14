@@ -54,6 +54,7 @@ class PdfExportManager @Inject constructor(
             data.locations?.let { if (it.isNotEmpty()) addLocationsSection(document, it) }
             data.bills?.let { if (it.isNotEmpty()) addBillsSection(document, it) }
             data.inventoryItems?.let { if (it.isNotEmpty()) addInventorySection(document, it) }
+            data.stockTransactions?.let { if (it.isNotEmpty()) addStockTransactionsSection(document, it) }
             data.laborLogs?.let { if (it.isNotEmpty()) addLaborLogsSection(document, it) }
             data.maintenanceLogs?.let { if (it.isNotEmpty()) addMaintenanceLogsSection(document, it) }
             data.analytics?.let { addAnalyticsSection(document, it) }
@@ -119,14 +120,15 @@ class PdfExportManager @Inject constructor(
         document.add(Paragraph("\n"))
     }
     
-    private fun addFuelLogsSection(document: Document, logs: List<com.example.agrimanager.data.local.FuelLogEntity>) {
+    private fun addFuelLogsSection(document: Document, logs: List<com.example.agrimanager.data.models.FuelLogWithMachine>) {
         addSectionTitle(document, "FUEL LOGS")
         
-        val table = Table(floatArrayOf(1f, 2f, 1.5f, 1.5f, 1.5f))
+        val table = Table(floatArrayOf(1f, 2f, 2f, 1.5f, 1.5f, 1.5f))
             .setWidth(UnitValue.createPercentValue(100f))
         
         table.addHeaderCell(createHeaderCell("#"))
         table.addHeaderCell(createHeaderCell("Date"))
+        table.addHeaderCell(createHeaderCell("Machine"))
         table.addHeaderCell(createHeaderCell("Liters"))
         table.addHeaderCell(createHeaderCell("Rate"))
         table.addHeaderCell(createHeaderCell("Total Cost"))
@@ -135,13 +137,14 @@ class PdfExportManager @Inject constructor(
         logs.forEachIndexed { index, log ->
             table.addCell(createDataCell("${index + 1}"))
             table.addCell(createDataCell(dateFormat.format(Date(log.date))))
+            table.addCell(createDataCell(log.machineName))
             table.addCell(createDataCell("${log.liters} L"))
             table.addCell(createDataCell("Rs. ${log.rate}"))
             table.addCell(createDataCell("Rs. ${log.totalCost}"))
             totalCost += log.totalCost
         }
         
-        table.addCell(createTotalCell("TOTAL", 4))
+        table.addCell(createTotalCell("TOTAL", 5))
         table.addCell(createTotalCell("Rs. $totalCost", 1))
         
         document.add(table)
@@ -168,20 +171,22 @@ class PdfExportManager @Inject constructor(
         document.add(Paragraph("\n"))
     }
     
-    private fun addTransactionsSection(document: Document, transactions: List<com.example.agrimanager.data.local.TransactionEntity>) {
+    private fun addTransactionsSection(document: Document, transactions: List<com.example.agrimanager.data.models.TransactionWithEmployee>) {
         addSectionTitle(document, "SALARY TRANSACTIONS")
         
-        val table = Table(floatArrayOf(1f, 2f, 2f, 1.5f))
+        val table = Table(floatArrayOf(1f, 2f, 2f, 2f, 1.5f))
             .setWidth(UnitValue.createPercentValue(100f))
         
         table.addHeaderCell(createHeaderCell("#"))
         table.addHeaderCell(createHeaderCell("Date"))
+        table.addHeaderCell(createHeaderCell("Employee"))
         table.addHeaderCell(createHeaderCell("Type"))
         table.addHeaderCell(createHeaderCell("Amount"))
         
         transactions.forEachIndexed { index, trans ->
             table.addCell(createDataCell("${index + 1}"))
             table.addCell(createDataCell(dateTimeFormat.format(Date(trans.timestamp))))
+            table.addCell(createDataCell(trans.employeeName))
             table.addCell(createDataCell(if (trans.type == "CREDIT") "Salary Added" else "Advance Given"))
             table.addCell(createDataCell("Rs. ${trans.amount}"))
         }
@@ -254,6 +259,39 @@ class PdfExportManager @Inject constructor(
             table.addCell(createDataCell("${item.currentQuantity}"))
             table.addCell(createDataCell(item.unit))
         }
+        
+        document.add(table)
+        document.add(Paragraph("\n"))
+    }
+    
+    private fun addStockTransactionsSection(document: Document, transactions: List<com.example.agrimanager.data.models.StockTransactionWithItem>) {
+        addSectionTitle(document, "STOCK TRANSACTIONS")
+        
+        val table = Table(floatArrayOf(1f, 2f, 2f, 1.5f, 1.5f, 1.5f))
+            .setWidth(UnitValue.createPercentValue(100f))
+        
+        table.addHeaderCell(createHeaderCell("#"))
+        table.addHeaderCell(createHeaderCell("Date"))
+        table.addHeaderCell(createHeaderCell("Item"))
+        table.addHeaderCell(createHeaderCell("Type"))
+        table.addHeaderCell(createHeaderCell("Quantity"))
+        table.addHeaderCell(createHeaderCell("Cost"))
+        
+        var totalCost = 0.0
+        transactions.forEachIndexed { index, trans ->
+            table.addCell(createDataCell("${index + 1}"))
+            table.addCell(createDataCell(dateFormat.format(Date(trans.date))))
+            table.addCell(createDataCell(trans.itemName))
+            table.addCell(createDataCell(if (trans.type == "IN") "Restock" else "Stock-Out"))
+            table.addCell(createDataCell("${trans.quantity}"))
+            table.addCell(createDataCell(trans.totalCost?.let { "Rs. $it" } ?: "-"))
+            if (trans.totalCost != null) {
+                totalCost += trans.totalCost
+            }
+        }
+        
+        table.addCell(createTotalCell("TOTAL COST", 5))
+        table.addCell(createTotalCell("Rs. $totalCost", 1))
         
         document.add(table)
         document.add(Paragraph("\n"))

@@ -997,11 +997,23 @@ class FarmRepository @Inject constructor(
             } else null,
             
             fuelLogs = if (config.includeFuel) {
-                if (config.startDate != null) {
+                val logs = if (config.startDate != null) {
                     dao.getFuelLogsByDateRange(startDate, endDate)
                 } else {
-                    // Get all fuel logs by using very old start date
                     dao.getFuelLogsByDateRange(0L, System.currentTimeMillis())
+                }
+                // Enrich with machine names
+                logs.map { log ->
+                    val machine = dao.getMachineById(log.machineId)
+                    com.example.agrimanager.data.models.FuelLogWithMachine(
+                        id = log.id,
+                        machineId = log.machineId,
+                        machineName = machine?.name ?: "Unknown Machine",
+                        liters = log.liters,
+                        rate = log.rate,
+                        totalCost = log.totalCost,
+                        date = log.date
+                    )
                 }
             } else null,
             
@@ -1010,10 +1022,22 @@ class FarmRepository @Inject constructor(
             } else null,
             
             transactions = if (config.includeSalary) {
-                if (config.startDate != null) {
+                val trans = if (config.startDate != null) {
                     dao.getTransactionsByDateRange(startDate, endDate)
                 } else {
                     dao.getTransactionsByDateRange(0L, System.currentTimeMillis())
+                }
+                // Enrich with employee names
+                trans.map { transaction ->
+                    val employee = dao.getEmployeeById(transaction.employeeId)
+                    com.example.agrimanager.data.models.TransactionWithEmployee(
+                        id = transaction.id,
+                        employeeId = transaction.employeeId,
+                        employeeName = employee?.name ?: "Unknown Employee",
+                        amount = transaction.amount,
+                        type = transaction.type,
+                        timestamp = transaction.timestamp
+                    )
                 }
             } else null,
             
@@ -1042,10 +1066,23 @@ class FarmRepository @Inject constructor(
             } else null,
             
             stockTransactions = if (config.includeInventory) {
-                if (config.startDate != null) {
+                val trans = if (config.startDate != null) {
                     dao.getStockTransactionsByDateRange(startDate, endDate)
                 } else {
                     dao.getStockTransactionsByDateRange(0L, System.currentTimeMillis())
+                }
+                // Enrich with item names
+                trans.map { transaction ->
+                    val item = dao.getInventoryItemById(transaction.itemId)
+                    com.example.agrimanager.data.models.StockTransactionWithItem(
+                        id = transaction.id,
+                        itemId = transaction.itemId,
+                        itemName = item?.name ?: "Unknown Item",
+                        type = transaction.type,
+                        quantity = transaction.quantity,
+                        totalCost = transaction.totalCost,
+                        date = transaction.date
+                    )
                 }
             } else null,
             

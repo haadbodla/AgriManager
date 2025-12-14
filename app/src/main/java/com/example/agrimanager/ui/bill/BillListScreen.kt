@@ -3,6 +3,8 @@ package com.example.agrimanager.ui.bill
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -260,14 +262,16 @@ fun AddBillDialog(
                         expanded = monthExpanded,
                         onDismissRequest = { monthExpanded = false }
                     ) {
-                        months.forEach { monthName ->
-                            DropdownMenuItem(
-                                text = { Text(monthName) },
-                                onClick = {
-                                    month = monthName
-                                    monthExpanded = false
-                                }
-                            )
+                        Column(modifier = Modifier.height(120.dp).verticalScroll(rememberScrollState())) {
+                            months.forEach { monthName ->
+                                DropdownMenuItem(
+                                    text = { Text(monthName) },
+                                    onClick = {
+                                        month = monthName
+                                        monthExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }

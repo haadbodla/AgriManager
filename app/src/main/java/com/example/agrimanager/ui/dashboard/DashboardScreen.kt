@@ -55,6 +55,20 @@ fun DashboardScreen(
             PermissionHelperEntryPoint::class.java
         ).permissionHelper()
     }
+    
+    // Get user email and extract username
+    val userEmail = remember {
+        context.getSharedPreferences("agri_manager_prefs", android.content.Context.MODE_PRIVATE)
+            .getString("user_email", "") ?: ""
+    }
+    val userName = remember(userEmail) {
+        if (userEmail.contains("@")) {
+            userEmail.substringBefore("@")
+        } else {
+            "User"
+        }
+    }
+    
     // 1. Define the Menu Data
     val menuItems = listOf(
         DashboardItem("Fuel", Color(0xFFFFC107), Icons.Default.LocalGasStation) { onFuelClick() },
@@ -69,7 +83,14 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("AgriManager", fontWeight = FontWeight.Bold)
+                    Column {
+                        Text("AgriManager", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Welcome, $userName",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 actions = {
                     // Role Badge
