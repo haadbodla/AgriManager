@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // REMOVED: id("kotlin-kapt") <-- This caused the crash
+
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp") // We keep this for both Room and Hilt
     id("com.google.gms.google-services")
