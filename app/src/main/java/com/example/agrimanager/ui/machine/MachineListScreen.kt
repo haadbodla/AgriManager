@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.MachineEntity
+import com.example.agrimanager.ui.components.CountBadge
 import com.example.agrimanager.utils.PermissionHelper
 import dagger.hilt.android.EntryPointAccessors
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
@@ -39,7 +40,9 @@ fun MachineListScreen(
         ).permissionHelper()
     }
     
+    
     val machines by viewModel.machineList.collectAsState()
+    val newFuelLogCounts by viewModel.newFuelLogCounts.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -82,6 +85,7 @@ fun MachineListScreen(
                 items(machines) { machine ->
                     MachineItem(
                         machine = machine,
+                        newLogCount = newFuelLogCounts[machine.id] ?: 0,
                         onDelete = {
                             machineToDelete = machine
                             showDeleteDialog = true
@@ -139,18 +143,19 @@ fun MachineListScreen(
     }
 }
 
-// 2. THE LIST ITEM
-@OptIn(ExperimentalMaterial3Api::class) // Required for Card onClick
+// 2. THE LIST ITEM with count badge for new fuel logs
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MachineItem(
     machine: MachineEntity,
+    newLogCount: Int = 0,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
     onClick: () -> Unit,
     permissionHelper: PermissionHelper
 ) {
     Card(
-        onClick = onClick, // <--- NEW: Enable clicking the card
+        onClick = onClick,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
@@ -161,11 +166,18 @@ fun MachineItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = machine.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = machine.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    // Show count badge if there are new fuel logs
+                    CountBadge(count = newLogCount)
+                }
                 Text(
                     text = formatMachineDate(machine.dateAdded),
                     style = MaterialTheme.typography.bodySmall,

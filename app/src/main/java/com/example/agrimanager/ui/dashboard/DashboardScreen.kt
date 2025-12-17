@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.agrimanager.ui.components.NotificationDot
+import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import com.example.agrimanager.utils.SyncStatus
 import dagger.hilt.android.EntryPointAccessors
@@ -45,6 +47,7 @@ fun DashboardScreen(
 ) {
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val syncStatus by viewModel.syncStatus.collectAsState()
+    val newDataCounts by viewModel.newDataCounts.collectAsState()
 
     val context = LocalContext.current
 
@@ -65,14 +68,26 @@ fun DashboardScreen(
         if (userEmail.contains("@")) userEmail.substringBefore("@") else "User"
     }
 
-    // Menu Items Definition
+    // Menu Items Definition with new data counts
     val menuItems = listOf(
-        DashboardItem("Fuel", Color(0xFFFFC107), Icons.Default.LocalGasStation) { onFuelClick() },
-        DashboardItem("Labor", Color(0xFF2196F3), Icons.Default.Person) { onLaborClick() },
-        DashboardItem("Stock", Color(0xFF4CAF50), Icons.Default.Inventory) { onInventoryClick() },
-        DashboardItem("Bill", Color(0xFF9C27B0), Icons.Default.Receipt) { onBillClick() },
-        DashboardItem("Salary", Color(0xFF009688), Icons.Default.AttachMoney) { onSalaryClick() },
-        DashboardItem("Repair", Color(0xFFFF5722), Icons.Default.Build) { onMaintenanceClick() }
+        DashboardItem("Fuel", Color(0xFFFFC107), Icons.Default.LocalGasStation, newDataCounts.fuel) {
+            onFuelClick()
+        },
+        DashboardItem("Labor", Color(0xFF2196F3), Icons.Default.Person, newDataCounts.labor) {
+            onLaborClick()
+        },
+        DashboardItem("Stock", Color(0xFF4CAF50), Icons.Default.Inventory, newDataCounts.inventory) {
+            onInventoryClick()
+        },
+        DashboardItem("Bill", Color(0xFF9C27B0), Icons.Default.Receipt, newDataCounts.bills) {
+            onBillClick()
+        },
+        DashboardItem("Salary", Color(0xFF009688), Icons.Default.AttachMoney, newDataCounts.salary) {
+            onSalaryClick()
+        },
+        DashboardItem("Repair", Color(0xFFFF5722), Icons.Default.Build, newDataCounts.maintenance) {
+            onMaintenanceClick()
+        }
     )
 
     Scaffold(
@@ -82,6 +97,11 @@ fun DashboardScreen(
                     Text("AgriManager", fontWeight = FontWeight.Bold)
                 },
                 actions = {
+                    // 1. MOVED: Role Badge is now here in the Top Bar
+                    RoleBadge(permissionHelper = permissionHelper)
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     RefreshButton(
                         isRefreshing = isRefreshing,
                         onClick = { viewModel.refreshData() }
@@ -104,7 +124,7 @@ fun DashboardScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- HEADER SECTION (User Info + Badges) ---
+            // --- HEADER SECTION (Welcome + Sync Status) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -126,12 +146,8 @@ fun DashboardScreen(
                     )
                 }
 
-                // Right: Role and Sync Status stacked
-                Column(horizontalAlignment = Alignment.End) {
-                    RoleBadge(permissionHelper = permissionHelper)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    SyncStatusIndicator(syncStatus = syncStatus)
-                }
+                // Right: Sync Status (Role Badge removed from here)
+                SyncStatusIndicator(syncStatus = syncStatus)
             }
             // -------------------------------------------
 
@@ -199,28 +215,47 @@ data class DashboardItem(
     val label: String,
     val color: Color,
     val icon: ImageVector,
+    val newCount: Int = 0,  // Number of new entries for this module
     val onClick: () -> Unit
 )
 
+/**
+ * Dashboard quick action button with optional red notification dot.
+ * Shows dot when newCount > 0 (new data exists for this module).
+ */
 @Composable
 fun DashboardButton(item: DashboardItem) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier
-                .size(70.dp)
-                .clip(CircleShape)
-                .background(item.color)
-                .clickable { item.onClick() },
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = item.label,
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
-            )
+            // Main circular button
+            Box(
+                modifier = Modifier
+                    .size(70.dp)
+                    .clip(CircleShape)
+                    .background(item.color)
+                    .clickable { item.onClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = item.icon,
+                    contentDescription = item.label,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            
+            // Red notification dot (top-right corner)
+            if (item.newCount > 0) {
+                NotificationDot(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 2.dp, y = 2.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -298,7 +333,6 @@ fun SyncStatusIndicator(
     syncStatus: SyncStatus,
     modifier: Modifier = Modifier
 ) {
-    // Note: Ensure your SyncStatus class is imported correctly at the top
     val (icon, color, text) = when (syncStatus) {
         is SyncStatus.Synced -> Triple(
             Icons.Default.CloudDone,

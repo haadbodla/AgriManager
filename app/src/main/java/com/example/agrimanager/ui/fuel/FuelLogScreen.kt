@@ -19,6 +19,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.FuelLogEntity
+import com.example.agrimanager.ui.components.NewBadge
+import com.example.agrimanager.ui.components.newCardColor
+import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 import dagger.hilt.android.EntryPointAccessors
@@ -45,6 +48,24 @@ fun FuelLogScreen(
     val totalCost by viewModel.totalCost.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var editingLog by remember { mutableStateOf<FuelLogEntity?>(null) }
+    
+    // Get NewDataTracker for checking if entries are new
+    val newDataTracker = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            NewDataTrackerEntryPoint::class.java
+        ).newDataTracker()
+    }
+    // Capture last seen timestamp BEFORE marking as seen
+    val lastSeenTimestamp = remember { newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_FUEL) }
+    
+    // Mark module as seen when leaving this screen
+    DisposableEffect(Unit) {
+        onDispose {
+            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_FUEL)
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -90,6 +111,7 @@ fun FuelLogScreen(
                 items(logs) { log ->
                     FuelLogCard(
                         log = log,
+                        isNew = log.date > lastSeenTimestamp,
                         onEdit = {
                             editingLog = log
                             showDialog = true
@@ -122,16 +144,25 @@ fun FuelLogScreen(
     }
 }
 
+/**
+ * Fuel log card with highlighted background for new entries.
+ */
 @Composable
 fun FuelLogCard(
     log: FuelLogEntity,
+    isNew: Boolean = false,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     permissionHelper: PermissionHelper
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Card(elevation = CardDefaults.cardElevation(2.dp)) {
+    Card(
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = newCardColor(isNew = isNew)
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -139,7 +170,15 @@ fun FuelLogCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Date: ${SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(log.date))}", fontWeight = FontWeight.Bold)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Date: ${SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(log.date))}", fontWeight = FontWeight.Bold)
+                        if (isNew) {
+                            NewBadge()
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                         Text("${log.liters} Liters @ ${log.rate}/L")
                         Text("Rs. ${log.totalCost}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)

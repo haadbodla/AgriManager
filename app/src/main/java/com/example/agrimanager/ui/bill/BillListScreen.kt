@@ -23,6 +23,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.BillWithLocation
 import com.example.agrimanager.data.local.LocationEntity
+import com.example.agrimanager.ui.components.NewBadge
+import com.example.agrimanager.ui.components.newCardColor
+import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 import dagger.hilt.android.EntryPointAccessors
@@ -44,6 +48,22 @@ fun BillListScreen(
             context.applicationContext,
             PermissionHelperEntryPoint::class.java
         ).permissionHelper()
+    }
+    
+    // Get NewDataTracker for checking if entries are new
+    val newDataTracker = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            NewDataTrackerEntryPoint::class.java
+        ).newDataTracker()
+    }
+    val lastSeenTimestamp = remember { newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_BILLS) }
+    
+    // Mark module as seen when leaving this screen
+    DisposableEffect(Unit) {
+        onDispose {
+            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_BILLS)
+        }
     }
     
     val bills by viewModel.allBills.collectAsState()
@@ -87,6 +107,7 @@ fun BillListScreen(
                 items(bills) { item ->
                     BillCard(
                         item = item,
+                        isNew = item.bill.dateAdded > lastSeenTimestamp,
                         onEdit = {
                             editingBill = item
                             showDialog = true
@@ -123,13 +144,19 @@ fun BillListScreen(
 @Composable
 fun BillCard(
     item: BillWithLocation,
+    isNew: Boolean = false,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     permissionHelper: PermissionHelper
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Card(elevation = CardDefaults.cardElevation(2.dp)) {
+    Card(
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = newCardColor(isNew = isNew)
+        )
+    ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -137,7 +164,15 @@ fun BillCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(item.locationName, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(item.locationName, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
+                        if (isNew) {
+                            NewBadge()
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Column {

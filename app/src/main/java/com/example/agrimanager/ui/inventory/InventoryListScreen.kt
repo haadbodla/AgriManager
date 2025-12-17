@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -21,6 +22,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.InventoryItemEntity
 import com.example.agrimanager.data.local.LocationEntity
 import com.example.agrimanager.data.local.EmployeeEntity
+import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.utils.NewDataTracker
+import dagger.hilt.android.EntryPointAccessors
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,6 +34,22 @@ fun InventoryListScreen(
     onItemClick: (Int) -> Unit,
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    
+    // Get NewDataTracker and mark module as seen when leaving
+    val newDataTracker = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            NewDataTrackerEntryPoint::class.java
+        ).newDataTracker()
+    }
+    
+    DisposableEffect(Unit) {
+        onDispose {
+            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_INVENTORY)
+        }
+    }
+    
     val inventoryItems by viewModel.inventoryItems.collectAsState()
     val showPurchaseDialog by viewModel.showPurchaseDialog.collectAsState()
     val showStockOutDialog by viewModel.showStockOutDialog.collectAsState()

@@ -367,4 +367,57 @@ interface FarmDao {
         ORDER BY date DESC
     """)
     suspend fun getStockTransactionsByDateRange(startDate: Long, endDate: Long): List<StockTransactionEntity>
+
+    // ================== NEW DATA NOTIFICATION QUERIES ==================
+    
+    // --- Latest Timestamps for Red Dot Detection ---
+    
+    @Query("SELECT MAX(date) FROM fuel_logs")
+    fun getLatestFuelLogTimestamp(): Flow<Long?>
+    
+    @Query("SELECT MAX(date) FROM labor_logs")
+    fun getLatestLaborLogTimestamp(): Flow<Long?>
+    
+    @Query("SELECT MAX(date_added) FROM bills")
+    fun getLatestBillTimestamp(): Flow<Long?>
+    
+    @Query("SELECT MAX(timestamp) FROM transactions")
+    fun getLatestTransactionTimestamp(): Flow<Long?>
+    
+    @Query("SELECT MAX(date_added) FROM inventory_items")
+    fun getLatestInventoryTimestamp(): Flow<Long?>
+    
+    @Query("SELECT MAX(date) FROM maintenance_logs")
+    fun getLatestMaintenanceTimestamp(): Flow<Long?>
+
+    // --- Count Entries After Timestamp (for count badges) ---
+    
+    @Query("SELECT COUNT(*) FROM fuel_logs WHERE date > :afterTimestamp")
+    fun countFuelLogsAfter(afterTimestamp: Long): Flow<Int>
+    
+    @Query("SELECT COUNT(*) FROM labor_logs WHERE date > :afterTimestamp")
+    fun countLaborLogsAfter(afterTimestamp: Long): Flow<Int>
+    
+    @Query("SELECT COUNT(*) FROM bills WHERE date_added > :afterTimestamp")
+    fun countBillsAfter(afterTimestamp: Long): Flow<Int>
+    
+    @Query("SELECT COUNT(*) FROM transactions WHERE timestamp > :afterTimestamp")
+    fun countTransactionsAfter(afterTimestamp: Long): Flow<Int>
+    
+    @Query("SELECT COUNT(*) FROM stock_transactions WHERE date > :afterTimestamp")
+    fun countInventoryTransactionsAfter(afterTimestamp: Long): Flow<Int>
+    
+    @Query("SELECT COUNT(*) FROM maintenance_logs WHERE date > :afterTimestamp")
+    fun countMaintenanceLogsAfter(afterTimestamp: Long): Flow<Int>
+
+    // --- Count Per Parent (for count badges on machine/location/employee cards) ---
+    
+    @Query("SELECT COUNT(*) FROM fuel_logs WHERE machine_id = :machineId AND date > :afterTimestamp")
+    fun countNewFuelLogsForMachine(machineId: Int, afterTimestamp: Long): Flow<Int>
+    
+    @Query("SELECT COUNT(*) FROM bills WHERE location_id = :locationId AND date_added > :afterTimestamp")
+    fun countNewBillsForLocation(locationId: Int, afterTimestamp: Long): Flow<Int>
+    
+    @Query("SELECT COUNT(*) FROM maintenance_logs WHERE machine_id = :machineId AND date > :afterTimestamp")
+    fun countNewMaintenanceLogsForMachine(machineId: Int, afterTimestamp: Long): Flow<Int>
 }

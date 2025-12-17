@@ -18,6 +18,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.MaintenanceLogWithMachine
+import com.example.agrimanager.ui.components.NewBadge
+import com.example.agrimanager.ui.components.newCardColor
+import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import dagger.hilt.android.EntryPointAccessors
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
@@ -39,6 +43,22 @@ fun MaintenanceListScreen(
             context.applicationContext,
             PermissionHelperEntryPoint::class.java
         ).permissionHelper()
+    }
+    
+    // Get NewDataTracker for checking if entries are new
+    val newDataTracker = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            NewDataTrackerEntryPoint::class.java
+        ).newDataTracker()
+    }
+    val lastSeenTimestamp = remember { newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_MAINTENANCE) }
+    
+    // Mark module as seen when leaving this screen
+    DisposableEffect(Unit) {
+        onDispose {
+            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_MAINTENANCE)
+        }
     }
     
     val maintenanceLogs by viewModel.maintenanceLogs.collectAsState()
@@ -90,6 +110,7 @@ fun MaintenanceListScreen(
                 items(maintenanceLogs) { log ->
                     MaintenanceLogCard(
                         log = log,
+                        isNew = log.date > lastSeenTimestamp,
                         onEdit = { onEditMaintenanceClick(log.id) },
                         onDelete = { viewModel.deleteMaintenanceLog(log.id) },
                         permissionHelper = permissionHelper
@@ -103,6 +124,7 @@ fun MaintenanceListScreen(
 @Composable
 fun MaintenanceLogCard(
     log: MaintenanceLogWithMachine,
+    isNew: Boolean = false,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     permissionHelper: PermissionHelper
@@ -114,7 +136,7 @@ fun MaintenanceLogCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = newCardColor(isNew = isNew)
         )
     ) {
         Row(
@@ -125,12 +147,20 @@ fun MaintenanceLogCard(
             verticalAlignment = Alignment.Top
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                // Machine name
-                Text(
-                    text = log.machineName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                // Machine name with NEW badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = log.machineName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isNew) {
+                        NewBadge()
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 

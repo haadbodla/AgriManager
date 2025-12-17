@@ -20,6 +20,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.agrimanager.data.local.EmployeeEntity
+import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import dagger.hilt.android.EntryPointAccessors
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
@@ -38,6 +40,20 @@ fun EmployeeListScreen(
             context.applicationContext,
             PermissionHelperEntryPoint::class.java
         ).permissionHelper()
+    }
+    
+    // Get NewDataTracker and mark module as seen when leaving
+    val newDataTracker = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            NewDataTrackerEntryPoint::class.java
+        ).newDataTracker()
+    }
+    
+    DisposableEffect(Unit) {
+        onDispose {
+            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_SALARY)
+        }
     }
     
     val employees by viewModel.employeeList.collectAsState()

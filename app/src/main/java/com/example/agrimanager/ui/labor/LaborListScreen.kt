@@ -18,6 +18,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.LaborLogWithEmployee
+import com.example.agrimanager.ui.components.NewBadge
+import com.example.agrimanager.ui.components.newCardColor
+import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import dagger.hilt.android.EntryPointAccessors
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
@@ -39,6 +43,22 @@ fun LaborListScreen(
             context.applicationContext,
             PermissionHelperEntryPoint::class.java
         ).permissionHelper()
+    }
+    
+    // Get NewDataTracker for checking if entries are new
+    val newDataTracker = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            NewDataTrackerEntryPoint::class.java
+        ).newDataTracker()
+    }
+    val lastSeenTimestamp = remember { newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_LABOR) }
+    
+    // Mark module as seen when leaving this screen
+    DisposableEffect(Unit) {
+        onDispose {
+            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_LABOR)
+        }
     }
     
     val laborLogs by viewModel.laborLogs.collectAsState()
@@ -90,6 +110,7 @@ fun LaborListScreen(
                 items(laborLogs) { log ->
                     LaborLogCard(
                         log = log,
+                        isNew = log.date > lastSeenTimestamp,
                         onEdit = { onEditLaborClick(log.id) },
                         onDelete = { viewModel.deleteLaborLog(log.id) },
                         permissionHelper = permissionHelper
@@ -103,6 +124,7 @@ fun LaborListScreen(
 @Composable
 fun LaborLogCard(
     log: LaborLogWithEmployee,
+    isNew: Boolean = false,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     permissionHelper: PermissionHelper
@@ -114,7 +136,7 @@ fun LaborLogCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = newCardColor(isNew = isNew)
         )
     ) {
         Row(
@@ -125,12 +147,20 @@ fun LaborLogCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                // Employee name
-                Text(
-                    text = log.employeeName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                // Employee name with NEW badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = log.employeeName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isNew) {
+                        NewBadge()
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 
