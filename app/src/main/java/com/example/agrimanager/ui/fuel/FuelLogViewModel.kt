@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.round
 
 @HiltViewModel
 class FuelLogViewModel @Inject constructor(
@@ -38,7 +39,7 @@ class FuelLogViewModel @Inject constructor(
                     date = System.currentTimeMillis(),
                     liters = litersVal,
                     rate = rateVal,
-                    totalCost = litersVal * rateVal,
+                    totalCost = round((litersVal * rateVal) * 100) / 100,
                     hourMeterReading = hourMeterVal
                 )
             )
@@ -58,7 +59,7 @@ class FuelLogViewModel @Inject constructor(
                     date = System.currentTimeMillis(),
                     liters = litersVal,
                     rate = rateVal,
-                    totalCost = litersVal * rateVal,
+                    totalCost = round((litersVal * rateVal) * 100) / 100,
                     hourMeterReading = hourMeterVal
                 )
             )

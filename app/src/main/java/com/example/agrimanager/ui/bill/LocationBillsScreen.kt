@@ -159,7 +159,7 @@ private fun BillItemCard(
                 )
             }
             Text(
-                text = "Rs. ${bill.amount}",
+                text = "Rs. ${String.format("%.2f", bill.amount)}",
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.titleMedium

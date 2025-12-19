@@ -178,6 +178,9 @@ interface FarmDao {
     // --- Inventory Items ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertInventoryItem(item: InventoryItemEntity): Long
+    
+    @Update
+    suspend fun updateInventoryItem(item: InventoryItemEntity)
 
     @Query("SELECT * FROM inventory_items ORDER BY name ASC")
     fun getAllInventoryItems(): Flow<List<InventoryItemEntity>>

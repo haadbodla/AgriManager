@@ -59,11 +59,10 @@ fun FuelLogScreen(
     // Capture last seen timestamp BEFORE marking as seen
     val lastSeenTimestamp = remember { newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_FUEL) }
     
-    // Mark module as seen when leaving this screen
-    DisposableEffect(Unit) {
-        onDispose {
-            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_FUEL)
-        }
+    // Mark module as seen after 15 minutes of viewing
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(15 * 60 * 1000L) // 15 minutes
+        newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_FUEL)
     }
 
 
@@ -181,7 +180,7 @@ fun FuelLogCard(
                     }
                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                         Text("${log.liters} Liters @ ${log.rate}/L")
-                        Text("Rs. ${log.totalCost}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("Rs. ${String.format("%.2f", log.totalCost)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                     Text("Meter: ${log.hourMeterReading} hrs", style = MaterialTheme.typography.bodySmall)
                 }

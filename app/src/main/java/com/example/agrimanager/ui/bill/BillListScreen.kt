@@ -59,11 +59,10 @@ fun BillListScreen(
     }
     val lastSeenTimestamp = remember { newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_BILLS) }
     
-    // Mark module as seen when leaving this screen
-    DisposableEffect(Unit) {
-        onDispose {
-            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_BILLS)
-        }
+    // Mark module as seen after 15 minutes of viewing
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(15 * 60 * 1000L) // 15 minutes
+        newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_BILLS)
     }
     
     val bills by viewModel.allBills.collectAsState()
@@ -179,7 +178,7 @@ fun BillCard(
                             Text(item.bill.billingMonth, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                             Text(SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(item.bill.dateAdded)), style = MaterialTheme.typography.bodySmall)
                         }
-                        Text("Rs. ${item.bill.amount}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
+                        Text("Rs. ${String.format("%.2f", item.bill.amount)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
                     }
                 }
                 

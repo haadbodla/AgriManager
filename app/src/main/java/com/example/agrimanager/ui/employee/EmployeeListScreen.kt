@@ -50,10 +50,10 @@ fun EmployeeListScreen(
         ).newDataTracker()
     }
     
-    DisposableEffect(Unit) {
-        onDispose {
-            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_SALARY)
-        }
+    // Mark module as seen after 15 minutes of viewing
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(15 * 60 * 1000L) // 15 minutes
+        newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_SALARY)
     }
     
     val employees by viewModel.employeeList.collectAsState()

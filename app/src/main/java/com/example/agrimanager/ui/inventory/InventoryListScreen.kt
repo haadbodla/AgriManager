@@ -9,6 +9,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +26,8 @@ import com.example.agrimanager.data.local.LocationEntity
 import com.example.agrimanager.data.local.EmployeeEntity
 import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
 import com.example.agrimanager.utils.NewDataTracker
+import com.example.agrimanager.utils.PermissionHelper
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 
 
@@ -44,15 +48,25 @@ fun InventoryListScreen(
         ).newDataTracker()
     }
     
-    DisposableEffect(Unit) {
-        onDispose {
-            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_INVENTORY)
-        }
+    // Get PermissionHelper for role-based UI
+    val permissionHelper = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            PermissionHelperEntryPoint::class.java
+        ).permissionHelper()
+    }
+    
+    // Mark module as seen after 15 minutes of viewing
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(15 * 60 * 1000L) // 15 minutes
+        newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_INVENTORY)
     }
     
     val inventoryItems by viewModel.inventoryItems.collectAsState()
     val showPurchaseDialog by viewModel.showPurchaseDialog.collectAsState()
     val showStockOutDialog by viewModel.showStockOutDialog.collectAsState()
+    val showEditDialog by viewModel.showEditDialog.collectAsState()
+    val showDeleteConfirmation by viewModel.showDeleteConfirmation.collectAsState()
     val isNewItem by viewModel.isNewItem.collectAsState()
     val locations by viewModel.locations.collectAsState()
     val employees by viewModel.employees.collectAsState()
@@ -104,7 +118,10 @@ fun InventoryListScreen(
                 items(inventoryItems) { item ->
                     InventoryItemCard(
                         item = item,
-                        onClick = { onItemClick(item.id) }
+                        onClick = { onItemClick(item.id) },
+                        onEdit = { viewModel.openEditDialog(it) },
+                        onDelete = { viewModel.openDeleteConfirmation(it) },
+                        permissionHelper = permissionHelper
                     )
                 }
             }
@@ -139,13 +156,58 @@ fun InventoryListScreen(
                 }
             )
         }
+        
+        // Edit Dialog
+        showEditDialog?.let { item ->
+            EditInventoryItemDialog(
+                item = item,
+                onDismiss = { viewModel.closeEditDialog() },
+                onConfirm = { updatedItem ->
+                    viewModel.updateItem(updatedItem)
+                    viewModel.closeEditDialog()
+                }
+            )
+        }
+        
+        // Delete Confirmation Dialog
+        showDeleteConfirmation?.let { item ->
+            AlertDialog(
+                onDismissRequest = { viewModel.closeDeleteConfirmation() },
+                icon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                title = { Text("Delete ${item.name}?") },
+                text = { 
+                    Text("This will permanently delete this item and all its transaction history. This action cannot be undone.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteItem(item)
+                            viewModel.closeDeleteConfirmation()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.closeDeleteConfirmation() }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 
 @Composable
 fun InventoryItemCard(
     item: InventoryItemEntity,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEdit: (InventoryItemEntity) -> Unit,
+    onDelete: (InventoryItemEntity) -> Unit,
+    permissionHelper: PermissionHelper
 ) {
     Card(
         modifier = Modifier
@@ -175,6 +237,29 @@ fun InventoryItemCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                
+                // Edit and Delete buttons (role-based)
+                Row {
+                    // Edit button (both Manager and Owner)
+                    IconButton(onClick = { onEdit(item) }) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    // Delete button (Owner only)
+                    if (permissionHelper.isOwner()) {
+                        IconButton(onClick = { onDelete(item) }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 }
 
                 // OUT badge
@@ -560,6 +645,89 @@ fun StockOutDialog(
                          selectedEmployeeId != null
             ) {
                 Text("Confirm")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun EditInventoryItemDialog(
+    item: InventoryItemEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (InventoryItemEntity) -> Unit
+) {
+    var itemName by remember { mutableStateOf(item.name) }
+    var category by remember { mutableStateOf(item.category) }
+    var unit by remember { mutableStateOf(item.unit) }
+    var reorderLevel by remember { mutableStateOf(item.reorderLevel.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit ${item.name}") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = itemName,
+                    onValueChange = { itemName = it },
+                    label = { Text("Item Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = { category = it },
+                    label = { Text("Category") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = unit,
+                    onValueChange = { unit = it },
+                    label = { Text("Unit (e.g. Bag, Kg)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = reorderLevel,
+                    onValueChange = { newValue ->
+                        if (newValue.isEmpty() || newValue.matches(Regex("^\\\\d*\\\\.?\\\\d*$"))) {
+                            reorderLevel = newValue
+                        }
+                    },
+                    label = { Text("Reorder Level") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = reorderLevel.isNotEmpty() && reorderLevel.toDoubleOrNull() == null,
+                    supportingText = {
+                        if (reorderLevel.isNotEmpty() && reorderLevel.toDoubleOrNull() == null) {
+                            Text("Please enter a valid number")
+                        }
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val updatedItem = item.copy(
+                        name = itemName,
+                        category = category,
+                        unit = unit,
+                        reorderLevel = reorderLevel.toDoubleOrNull() ?: item.reorderLevel
+                    )
+                    onConfirm(updatedItem)
+                },
+                enabled = itemName.isNotBlank() && 
+                         category.isNotBlank() && 
+                         unit.isNotBlank() &&
+                         reorderLevel.toDoubleOrNull() != null
+            ) {
+                Text("Save")
             }
         },
         dismissButton = {

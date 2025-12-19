@@ -54,11 +54,10 @@ fun LaborListScreen(
     }
     val lastSeenTimestamp = remember { newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_LABOR) }
     
-    // Mark module as seen when leaving this screen
-    DisposableEffect(Unit) {
-        onDispose {
-            newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_LABOR)
-        }
+    // Mark module as seen after 15 minutes of viewing
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(15 * 60 * 1000L) // 15 minutes
+        newDataTracker.markModuleAsSeen(NewDataTracker.MODULE_LABOR)
     }
     
     val laborLogs by viewModel.laborLogs.collectAsState()

@@ -328,6 +328,20 @@ class FarmRepository @Inject constructor(
         scheduleSync("inventory_items", id.toString(), data)
     }
     
+    suspend fun updateInventoryItem(item: InventoryItemEntity) {
+        dao.updateInventoryItem(item)
+        val data = mapOf(
+            "id" to item.id,
+            "name" to item.name,
+            "category" to item.category,
+            "unit" to item.unit,
+            "currentQuantity" to item.currentQuantity,
+            "reorderLevel" to item.reorderLevel,
+            "dateAdded" to item.dateAdded
+        )
+        scheduleSync("inventory_items", item.id.toString(), data)
+    }
+    
     suspend fun recordPurchase(itemId: Int, quantity: Double, totalCost: Double) {
         // Get current item
         val item = dao.getInventoryItemById(itemId) ?: return

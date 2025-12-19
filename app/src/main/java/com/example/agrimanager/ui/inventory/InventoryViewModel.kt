@@ -77,6 +77,14 @@ class InventoryViewModel @Inject constructor(
 
     private val _isNewItem = MutableStateFlow(true)
     val isNewItem: StateFlow<Boolean> = _isNewItem.asStateFlow()
+    
+    // Edit dialog state
+    private val _showEditDialog = MutableStateFlow<InventoryItemEntity?>(null)
+    val showEditDialog: StateFlow<InventoryItemEntity?> = _showEditDialog.asStateFlow()
+    
+    // Delete confirmation state
+    private val _showDeleteConfirmation = MutableStateFlow<InventoryItemEntity?>(null)
+    val showDeleteConfirmation: StateFlow<InventoryItemEntity?> = _showDeleteConfirmation.asStateFlow()
 
     fun openPurchaseDialog(isNew: Boolean = true) {
         _isNewItem.value = isNew
@@ -93,6 +101,22 @@ class InventoryViewModel @Inject constructor(
 
     fun closeStockOutDialog() {
         _showStockOutDialog.value = null
+    }
+    
+    fun openEditDialog(item: InventoryItemEntity) {
+        _showEditDialog.value = item
+    }
+    
+    fun closeEditDialog() {
+        _showEditDialog.value = null
+    }
+    
+    fun openDeleteConfirmation(item: InventoryItemEntity) {
+        _showDeleteConfirmation.value = item
+    }
+    
+    fun closeDeleteConfirmation() {
+        _showDeleteConfirmation.value = null
     }
 
     fun addNewItem(name: String, category: String, unit: String, reorderLevel: Double, quantity: Double, totalCost: Double) {
@@ -129,6 +153,18 @@ class InventoryViewModel @Inject constructor(
     fun recordStockOut(itemId: Int, quantity: Double, locationId: Int, employeeId: Int) {
         viewModelScope.launch {
             repository.recordStockOut(itemId, quantity, locationId, employeeId)
+        }
+    }
+    
+    fun updateItem(item: InventoryItemEntity) {
+        viewModelScope.launch {
+            repository.updateInventoryItem(item)
+        }
+    }
+    
+    fun deleteItem(item: InventoryItemEntity) {
+        viewModelScope.launch {
+            repository.deleteInventoryItem(item)
         }
     }
 }

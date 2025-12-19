@@ -38,8 +38,9 @@ fun DairyListScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     
-    // Clear notification dot when viewing
+    // Mark module as seen after 15 minutes of viewing
     LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(15 * 60 * 1000L) // 15 minutes
         val entryPoint = EntryPointAccessors.fromApplication(
             context.applicationContext,
             NewDataTrackerEntryPoint::class.java
