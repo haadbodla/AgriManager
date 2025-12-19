@@ -25,6 +25,7 @@ class NewDataTracker @Inject constructor(
         const val MODULE_BILLS = "bills"
         const val MODULE_SALARY = "salary"
         const val MODULE_MAINTENANCE = "maintenance"
+        const val MODULE_DAIRY = "dairy"
     }
     
     private val prefs: SharedPreferences by lazy {

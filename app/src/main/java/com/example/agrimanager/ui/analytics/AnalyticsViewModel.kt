@@ -30,4 +30,12 @@ class AnalyticsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = 0.0
         )
+
+    val monthlyMilkSales: StateFlow<Double> = repository
+        .getMonthlyMilkSales()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0.0
+        )
 }

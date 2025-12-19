@@ -130,7 +130,7 @@ fun ExportScreen(
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Note: Only fuel logs, bills, transactions, labor, maintenance, and stock transactions will be filtered by date.",
+                            "Note: Only fuel logs, bills, transactions, labor, maintenance, dairy logs, and stock transactions will be filtered by date.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -162,6 +162,9 @@ fun ExportScreen(
                         }
                         DataCheckbox("Analytics Summary", config.includeAnalytics) {
                             viewModel.updateConfig(config.copy(includeAnalytics = it))
+                        }
+                        DataCheckbox("Dairy Logs", config.includeDairy) {
+                            viewModel.updateConfig(config.copy(includeDairy = it))
                         }
                     }
                 }

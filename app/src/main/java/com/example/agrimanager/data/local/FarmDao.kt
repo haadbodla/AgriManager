@@ -75,6 +75,42 @@ interface FarmDao {
     @Query("SELECT * FROM fuel_logs WHERE machine_id = :machineId ORDER BY date DESC")
     fun getFuelLogsForMachine(machineId: Int): Flow<List<FuelLogEntity>>
 
+    // --- DAIRY MODULE ---
+    
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDairyCompany(company: DairyCompanyEntity): Long
+    
+    @Update
+    suspend fun updateDairyCompany(company: DairyCompanyEntity)
+    
+    @Delete
+    suspend fun deleteDairyCompany(company: DairyCompanyEntity)
+    
+    @Query("SELECT * FROM dairy_companies ORDER BY name ASC")
+    fun getAllDairyCompanies(): Flow<List<DairyCompanyEntity>>
+
+    @Query("SELECT * FROM dairy_companies WHERE company_id = :id")
+    suspend fun getDairyCompanyById(id: Int): DairyCompanyEntity?
+    
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDairyLog(log: DairyLogEntity): Long
+    
+    @Delete
+    suspend fun deleteDairyLog(log: DairyLogEntity)
+    
+    @Query("SELECT * FROM dairy_logs ORDER BY date DESC")
+    fun getAllDairyLogs(): Flow<List<DairyLogEntity>>
+    
+    @Query("SELECT COUNT(*) FROM dairy_logs WHERE date > :timestamp")
+    fun countDairyLogsAfter(timestamp: Long): Flow<Int>
+    
+    // Monthly Milk Sales (Current Month)
+    @Query("SELECT SUM(total_amount) FROM dairy_logs WHERE date >= :startOfMonth AND date <= :endOfMonth")
+    fun getMonthlyMilkSales(startOfMonth: Long, endOfMonth: Long): Flow<Double?>
+
+    @Query("SELECT * FROM dairy_logs WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
+    suspend fun getDairyLogsByDateRange(startDate: Long, endDate: Long): List<DairyLogEntity>
+
     @Query("SELECT * FROM fuel_logs WHERE machine_id = :machineId")
     suspend fun getFuelLogsForMachineList(machineId: Int): List<FuelLogEntity>
 

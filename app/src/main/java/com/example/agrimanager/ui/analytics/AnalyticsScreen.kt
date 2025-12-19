@@ -29,6 +29,7 @@ fun AnalyticsScreen(
 ) {
     val breakdown by viewModel.expenseBreakdown.collectAsState()
     val overallTotal by viewModel.overallTotalExpenses.collectAsState()
+    val milkSales by viewModel.monthlyMilkSales.collectAsState()
 
     Scaffold(
         topBar = {
@@ -54,6 +55,9 @@ fun AnalyticsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             breakdown?.let { data ->
+                // Milk Sales Card (Current Month)
+                MilkSalesCard(totalSales = milkSales)
+                
                 // Total Expenses Card (This Month)
                 TotalExpensesCard(totalExpenses = data.totalExpenses)
                 
@@ -251,6 +255,52 @@ fun SimplePieChart(breakdown: ExpenseBreakdown) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun MilkSalesCard(totalSales: Double) {
+    val formatter = java.text.NumberFormat.getNumberInstance(java.util.Locale("en", "IN")).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }
+    
+    val calendar = java.util.Calendar.getInstance()
+    val monthName = calendar.getDisplayName(java.util.Calendar.MONTH, java.util.Calendar.LONG, java.util.Locale.getDefault())
+    val year = calendar.get(java.util.Calendar.YEAR)
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = androidx.compose.ui.graphics.Color(0xFFE8F5E9)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "$monthName $year",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color(0xFF2E7D32)
+            )
+            androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Total Milk Sales",
+                style = MaterialTheme.typography.titleMedium,
+                color = androidx.compose.ui.graphics.Color(0xFF2E7D32)
+            )
+            androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Rs. " + formatter.format(totalSales),
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color(0xFF1B5E20)
+            )
         }
     }
 }

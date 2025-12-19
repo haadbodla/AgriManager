@@ -25,10 +25,11 @@ data class NewDataCounts(
     val inventory: Int = 0,
     val bills: Int = 0,
     val salary: Int = 0,
-    val maintenance: Int = 0
+    val maintenance: Int = 0,
+    val dairy: Int = 0
 ) {
     fun hasAnyNewData(): Boolean = fuel > 0 || labor > 0 || inventory > 0 || 
-                                    bills > 0 || salary > 0 || maintenance > 0
+                                    bills > 0 || salary > 0 || maintenance > 0 || dairy > 0
 }
 
 @HiltViewModel
@@ -80,6 +81,10 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             farmDao.countMaintenanceLogsAfter(newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_MAINTENANCE))
                 .collect { count -> _newDataCounts.value = _newDataCounts.value.copy(maintenance = count) }
+        }
+        viewModelScope.launch {
+            farmDao.countDairyLogsAfter(newDataTracker.getLastSeenTimestamp(NewDataTracker.MODULE_DAIRY))
+                .collect { count -> _newDataCounts.value = _newDataCounts.value.copy(dairy = count) }
         }
     }
     

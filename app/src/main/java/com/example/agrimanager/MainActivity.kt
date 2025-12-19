@@ -27,7 +27,20 @@ import com.example.agrimanager.ui.maintenance.MaintenanceListScreen
 import com.example.agrimanager.ui.inventory.InventoryDetailScreen
 import com.example.agrimanager.ui.analytics.AnalyticsScreen
 import com.example.agrimanager.ui.export.ExportScreen  // NEW: Import ExportScreen
-import com.example.agrimanager.ui.users.UserManagementScreen  // NEW: Import UserManagementScreen
+import com.example.agrimanager.ui.users.UserManagementScreen
+import com.example.agrimanager.ui.dairy.DairyListScreen
+import com.example.agrimanager.ui.dairy.DairySettingsScreen
+import com.example.agrimanager.ui.dairy.DairyViewModel
+import com.example.agrimanager.ui.dashboard.DashboardViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.agrimanager.utils.PermissionHelper
+import dagger.hilt.android.EntryPointAccessors
+import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import com.example.agrimanager.data.local.DairyLogEntity
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -84,8 +97,9 @@ class MainActivity : ComponentActivity() {
                         onLaborClick = { navController.navigate("labor_list") },
                         onMaintenanceClick = { navController.navigate("maintenance_list") },
                         onAnalyticsClick = { navController.navigate("analytics") },
-                        onManageUsersClick = { navController.navigate("user_management") },  // NEW: Navigate to user management
-                        onExportClick = { navController.navigate("export") },  // NEW: Navigate to export
+                        onManageUsersClick = { navController.navigate("user_management") },
+                        onExportClick = { navController.navigate("export") },
+                        onDairyClick = { navController.navigate("dairy_list") },
                         onLogoutClick = {
                             authRepository.signOut()
                             navController.navigate("login") {
@@ -223,6 +237,41 @@ class MainActivity : ComponentActivity() {
                 // NEW: Export Screen (Both Owner and Manager)
                 composable("export") {
                     ExportScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                composable("dairy_list") {
+                    val viewModel: DairyViewModel = hiltViewModel()
+                    val logs by viewModel.dairyLogs.collectAsState(initial = emptyList())
+                    val companies by viewModel.companies.collectAsState(initial = emptyList())
+                    val context = LocalContext.current
+                    val permissionHelper = remember {
+                        EntryPointAccessors.fromApplication(
+                            context.applicationContext,
+                            PermissionHelperEntryPoint::class.java
+                        ).permissionHelper()
+                    }
+                    
+                    DairyListScreen(
+                        logs = logs,
+                        companies = companies,
+                        permissionHelper = permissionHelper,
+                        onNavigateBack = { navController.popBackStack() },
+                        onSettingsClick = { navController.navigate("dairy_settings") },
+                        onAddLog = { viewModel.addDairyLog(it) },
+                        onDeleteLog = { viewModel.deleteDairyLog(it) }
+                    )
+                }
+
+                composable("dairy_settings") {
+                    val viewModel: DairyViewModel = hiltViewModel()
+                    val companies by viewModel.companies.collectAsState(initial = emptyList())
+                    DairySettingsScreen(
+                        companies = companies,
+                        onNavigateBack = { navController.popBackStack() },
+                        onAddCompany = { name, rate -> viewModel.addCompany(name, rate) },
+                        onUpdateCompany = { viewModel.updateCompany(it) },
+                        onDeleteCompany = { viewModel.deleteCompany(it) }
+                    )
                 }
             }
 

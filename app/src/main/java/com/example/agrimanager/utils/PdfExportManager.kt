@@ -57,6 +57,7 @@ class PdfExportManager @Inject constructor(
             data.stockTransactions?.let { if (it.isNotEmpty()) addStockTransactionsSection(document, it) }
             data.laborLogs?.let { if (it.isNotEmpty()) addLaborLogsSection(document, it) }
             data.maintenanceLogs?.let { if (it.isNotEmpty()) addMaintenanceLogsSection(document, it) }
+            data.dairyLogs?.let { if (it.isNotEmpty()) addDairyLogsSection(document, it) }
             data.analytics?.let { addAnalyticsSection(document, it) }
             
             addFooter(document)
@@ -350,6 +351,42 @@ class PdfExportManager @Inject constructor(
         
         table.addCell(createTotalCell("TOTAL", 4))
         table.addCell(createTotalCell("Rs. $totalCost", 1))
+        
+        document.add(table)
+        document.add(Paragraph("\n"))
+    }
+
+    private fun addDairyLogsSection(document: Document, logs: List<com.example.agrimanager.data.local.DairyLogEntity>) {
+        addSectionTitle(document, "DAIRY PRODUCTION & SALES")
+        
+        val table = Table(floatArrayOf(1f, 2f, 2f, 1.5f, 1.5f, 1.5f))
+            .setWidth(UnitValue.createPercentValue(100f))
+        
+        table.addHeaderCell(createHeaderCell("#"))
+        table.addHeaderCell(createHeaderCell("Date"))
+        table.addHeaderCell(createHeaderCell("Company"))
+        table.addHeaderCell(createHeaderCell("Liters"))
+        table.addHeaderCell(createHeaderCell("Total Amount"))
+        table.addHeaderCell(createHeaderCell("Added By"))
+        
+        var totalLiters = 0.0
+        var totalAmount = 0.0
+        logs.forEachIndexed { index, log ->
+            table.addCell(createDataCell("${index + 1}"))
+            table.addCell(createDataCell(dateFormat.format(Date(log.date))))
+            table.addCell(createDataCell(log.companyName))
+            table.addCell(createDataCell("${log.liters} L"))
+            table.addCell(createDataCell("Rs. ${log.totalAmount}"))
+            table.addCell(createDataCell(log.addedBy ?: "System"))
+            
+            totalLiters += log.liters
+            totalAmount += log.totalAmount
+        }
+        
+        table.addCell(createTotalCell("TOTAL", 3))
+        table.addCell(createTotalCell("$totalLiters L", 1))
+        table.addCell(createTotalCell("Rs. $totalAmount", 1))
+        table.addCell(createTotalCell("", 1))
         
         document.add(table)
         document.add(Paragraph("\n"))

@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 import java.util.concurrent.TimeUnit // <--- Crucial import for time
@@ -511,6 +512,67 @@ class FarmRepository @Inject constructor(
 
     suspend fun getMaintenanceLogById(id: Int): MaintenanceLogEntity? = dao.getMaintenanceLogById(id)
 
+    // ================== DAIRY OPERATIONS ==================
+
+    fun getAllDairyCompanies(): Flow<List<DairyCompanyEntity>> = dao.getAllDairyCompanies()
+
+    suspend fun insertDairyCompany(company: DairyCompanyEntity): Long {
+        val id = dao.insertDairyCompany(company)
+        val data = mapOf(
+            "id" to id,
+            "name" to company.name,
+            "ratePerLiter" to company.ratePerLiter,
+            "addedAt" to company.addedAt
+        )
+        scheduleSync("dairy_companies", id.toString(), data)
+        return id
+    }
+
+    suspend fun updateDairyCompany(company: DairyCompanyEntity) {
+        dao.updateDairyCompany(company)
+        val data = mapOf(
+            "company_id" to company.id,
+            "name" to company.name,
+            "ratePerLiter" to company.ratePerLiter,
+            "addedAt" to company.addedAt
+        )
+        scheduleSync("dairy_companies", company.id.toString(), data)
+    }
+
+    suspend fun deleteDairyCompany(company: DairyCompanyEntity) {
+        dao.deleteDairyCompany(company)
+        scheduleSync("dairy_companies", company.id.toString(), emptyMap(), isDelete = true)
+    }
+
+    fun getAllDairyLogs(): Flow<List<DairyLogEntity>> = dao.getAllDairyLogs()
+
+    suspend fun insertDairyLog(log: DairyLogEntity) {
+        val id = dao.insertDairyLog(log)
+        val data = mapOf(
+            "id" to id,
+            "date" to log.date,
+            "companyId" to (log.companyId ?: -1),
+            "companyName" to log.companyName,
+            "liters" to log.liters,
+            "totalAmount" to log.totalAmount,
+            "addedBy" to (log.addedBy ?: "")
+        )
+        scheduleSync("dairy_logs", id.toString(), data)
+    }
+
+    suspend fun deleteDairyLog(log: DairyLogEntity) {
+        dao.deleteDairyLog(log)
+        scheduleSync("dairy_logs", log.id.toString(), emptyMap(), isDelete = true)
+    }
+
+    fun getMonthlyMilkSales(): Flow<Double> {
+        val (start, end) = getCurrentMonthRange()
+        return dao.getMonthlyMilkSales(start, end).map { it ?: 0.0 }
+    }
+    
+    fun countDairyLogsAfter(timestamp: Long): Flow<Int> = dao.countDairyLogsAfter(timestamp)
+
+
 
     // ================== ANALYTICS OPERATIONS ==================
 
@@ -666,6 +728,12 @@ class FarmRepository @Inject constructor(
             } catch (e: Exception) {
                 // Silently continue on error
             }
+
+            try {
+                downloadDairyCompanies(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
             
             // === CHILD TABLES (have foreign keys) ===
             
@@ -701,6 +769,12 @@ class FarmRepository @Inject constructor(
             
             try {
                 downloadMaintenanceLogs(db, userId)
+            } catch (e: Exception) {
+                // Silently continue on error
+            }
+
+            try {
+                downloadDairyLogs(db, userId)
             } catch (e: Exception) {
                 // Silently continue on error
             }
@@ -971,6 +1045,53 @@ class FarmRepository @Inject constructor(
             dao.insertMaintenanceLog(log)
         }
     }
+
+    private suspend fun downloadDairyCompanies(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("dairy_companies")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
+            val company = DairyCompanyEntity(
+                id = effectiveId,
+                name = data["name"] as? String ?: "Unknown",
+                ratePerLiter = parseDouble(data["ratePerLiter"]),
+                addedAt = parseLong(data["addedAt"])
+            )
+            dao.insertDairyCompany(company)
+        }
+    }
+
+    private suspend fun downloadDairyLogs(db: com.google.firebase.firestore.FirebaseFirestore, userId: String) {
+        val snapshot = db.collection("users")
+            .document(userId)
+            .collection("dairy_logs")
+            .get()
+            .await()
+        
+        snapshot.documents.forEach { doc ->
+            val data = doc.data ?: return@forEach
+            val storedId = parseInt(data["id"])
+            val effectiveId = if (storedId != 0) storedId else doc.id.hashCode()
+            
+            val log = DairyLogEntity(
+                id = effectiveId,
+                date = parseLong(data["date"]),
+                companyId = parseInt(data["companyId"]),
+                companyName = data["companyName"] as? String ?: "Unknown",
+                liters = parseDouble(data["liters"]),
+                totalAmount = parseDouble(data["totalAmount"]),
+                addedBy = data["addedBy"] as? String ?: ""
+            )
+            dao.insertDairyLog(log)
+        }
+    }
     
     // ================== PDF EXPORT ==================
     
@@ -1108,6 +1229,14 @@ class FarmRepository @Inject constructor(
                     getMonthlyExpenseBreakdown().first()
                 } catch (e: Exception) {
                     null
+                }
+            } else null,
+
+            dairyLogs = if (config.includeDairy) {
+                if (config.startDate != null) {
+                    dao.getDairyLogsByDateRange(startDate, endDate)
+                } else {
+                    dao.getAllDairyLogs().first()
                 }
             } else null
         )

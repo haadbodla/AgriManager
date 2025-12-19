@@ -12,6 +12,7 @@ data class ExportConfig(
     val includeLabor: Boolean = true,
     val includeMaintenance: Boolean = true,
     val includeAnalytics: Boolean = true,
+    val includeDairy: Boolean = true,
     val startDate: Long? = null,
     val endDate: Long? = null
 )
@@ -34,6 +35,7 @@ data class ExportData(
     val stockTransactions: List<StockTransactionWithItem>?,
     val laborLogs: List<com.example.agrimanager.data.local.LaborLogWithEmployee>?,
     val maintenanceLogs: List<com.example.agrimanager.data.local.MaintenanceLogWithMachine>?,
+    val dairyLogs: List<com.example.agrimanager.data.local.DairyLogEntity>?,
     val analytics: com.example.agrimanager.data.local.ExpenseBreakdown?
 )
 

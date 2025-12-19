@@ -39,6 +39,7 @@ fun DashboardScreen(
     onInventoryClick: () -> Unit,
     onLaborClick: () -> Unit,
     onMaintenanceClick: () -> Unit,
+    onDairyClick: () -> Unit,
     onAnalyticsClick: () -> Unit,
     onManageUsersClick: () -> Unit,
     onExportClick: () -> Unit,
@@ -87,6 +88,9 @@ fun DashboardScreen(
         },
         DashboardItem("Repair", Color(0xFFFF5722), Icons.Default.Build, newDataCounts.maintenance) {
             onMaintenanceClick()
+        },
+        DashboardItem("Dairy", Color(0xFF00BCD4), Icons.Default.LocalDrink, newDataCounts.dairy) {
+            onDairyClick()
         }
     )
 
