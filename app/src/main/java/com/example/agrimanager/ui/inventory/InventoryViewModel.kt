@@ -20,6 +20,14 @@ data class StockHistoryUiModel(
     val employeeName: String? = null
 )
 
+// NEW: Transaction with running stock
+data class StockTransactionWithBalance(
+    val transaction: StockTransactionEntity,
+    val runningStock: Double,
+    val locationName: String? = null,
+    val employeeName: String? = null
+)
+
 @HiltViewModel
 class InventoryViewModel @Inject constructor(
     private val repository: FarmRepository
@@ -63,6 +71,65 @@ class InventoryViewModel @Inject constructor(
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    
+    // NEW: Transactions with running stock balance
+    val transactionsWithBalance: StateFlow<List<StockTransactionWithBalance>> = _selectedItemId.flatMapLatest { id ->
+        if (id == -1) flowOf(emptyList())
+        else {
+            combine(
+                repository.getStockTransactions(id),
+                locations,
+                employees
+            ) { transactions, locs, emps ->
+                if (transactions.isEmpty()) {
+                    emptyList()
+                } else {
+                    var runningStock = 0.0
+                    val sortedOldestFirst = transactions.sortedBy { it.date }
+                    
+                    sortedOldestFirst.map { tx ->
+                        runningStock += when (tx.type) {
+                            "IN" -> tx.quantity
+                            "OUT" -> -tx.quantity
+                            else -> 0.0
+                        }
+                        StockTransactionWithBalance(
+                            transaction = tx,
+                            runningStock = runningStock,
+                            locationName = locs.find { it.id == tx.locationId }?.name,
+                            employeeName = emps.find { it.id == tx.employeeId }?.name
+                        )
+                    }.sortedByDescending { it.transaction.date }
+                }
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    
+    // NEW: Total stats
+    val totalStockIn: StateFlow<Double> = transactionsWithBalance.map { list ->
+        list.filter { it.transaction.type == "IN" }.sumOf { it.transaction.quantity }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    
+    val totalStockOut: StateFlow<Double> = transactionsWithBalance.map { list ->
+        list.filter { it.transaction.type == "OUT" }.sumOf { it.transaction.quantity }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    
+    val totalPurchaseCost: StateFlow<Double> = transactionsWithBalance.map { list ->
+        list.filter { it.transaction.type == "IN" }
+            .sumOf { it.transaction.totalCost ?: 0.0 }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    
+    // NEW: Error handling
+    private val _operationError = MutableStateFlow<String?>(null)
+    val operationError: StateFlow<String?> = _operationError.asStateFlow()
+    
+    private val _operationSuccess = MutableStateFlow<String?>(null)
+    val operationSuccess: StateFlow<String?> = _operationSuccess.asStateFlow()
+    
+    fun clearMessages() {
+        _operationError.value = null
+        _operationSuccess.value = null
+    }
 
     fun selectItem(itemId: Int) {
         _selectedItemId.value = itemId
@@ -132,8 +199,6 @@ class InventoryViewModel @Inject constructor(
 
             // Record initial purchase if quantity > 0
             if (quantity > 0 && totalCost > 0) {
-                // Wait briefly for the item to be inserted so we can find it
-                // A better way is for repository.addInventoryItem to return the ID, but this works for now
                 kotlinx.coroutines.delay(100)
                 val items = inventoryItems.value
                 val newItem = items.find { it.name == name && it.category == category }
@@ -165,6 +230,29 @@ class InventoryViewModel @Inject constructor(
     fun deleteItem(item: InventoryItemEntity) {
         viewModelScope.launch {
             repository.deleteInventoryItem(item)
+        }
+    }
+    
+    // NEW: Update/Delete stock transactions
+    fun updateStockTransaction(transactionId: Int, newQuantity: Double, newDate: Long) {
+        viewModelScope.launch {
+            try {
+                repository.updateStockTransaction(transactionId, newQuantity, newDate)
+                _operationSuccess.value = "Stock transaction updated successfully"
+            } catch (e: Exception) {
+                _operationError.value = "Failed to update: ${e.message}"
+            }
+        }
+    }
+    
+    fun deleteStockTransaction(transactionId: Int) {
+        viewModelScope.launch {
+            try {
+                repository.deleteStockTransaction(transactionId)
+                _operationSuccess.value = "Stock transaction deleted successfully"
+            } catch (e: Exception) {
+                _operationError.value = "Failed to delete: ${e.message}"
+            }
         }
     }
 }

@@ -308,6 +308,27 @@ class FarmRepository @Inject constructor(
     fun getTransactionsForEmployee(employeeId: Int): Flow<List<TransactionEntity>> = dao.getTransactionsForEmployee(employeeId)
 
     fun getTotalAdvances(employeeId: Int): Flow<Double?> = dao.getTotalAdvances(employeeId)
+    
+    suspend fun updateTransaction(transactionId: Int, newAmount: Double, newTimestamp: Long) {
+        val transaction = dao.getTransactionById(transactionId) ?: return
+        val updatedTransaction = transaction.copy(amount = newAmount, timestamp = newTimestamp)
+        dao.updateTransaction(updatedTransaction)
+        
+        val data = mapOf(
+            "id" to transactionId,
+            "employeeId" to updatedTransaction.employeeId,
+            "amount" to newAmount,
+            "type" to updatedTransaction.type,
+            "timestamp" to newTimestamp
+        )
+        scheduleSync("transactions", transactionId.toString(), data)
+    }
+    
+    suspend fun deleteTransaction(transactionId: Int) {
+        val transaction = dao.getTransactionById(transactionId) ?: return
+        dao.deleteTransactionById(transactionId)
+        scheduleSync("transactions", transactionId.toString(), emptyMap(), isDelete = true)
+    }
 
 
     // ================== INVENTORY OPERATIONS ==================
@@ -424,6 +445,67 @@ class FarmRepository @Inject constructor(
             "date" to transaction.date
         )
         scheduleSync("stock_transactions", transId.toString(), transData)
+    }
+    
+    suspend fun updateStockTransaction(transactionId: Int, newQuantity: Double, newDate: Long) {
+        val transaction = dao.getStockTransactionById(transactionId) ?: return
+        val updatedTransaction = transaction.copy(quantity = newQuantity, date = newDate)
+        dao.updateStockTransaction(updatedTransaction)
+        
+        // Recalculate item stock
+        recalculateItemStock(transaction.itemId)
+        
+        // Sync to Firestore
+        val data = mapOf(
+            "id" to transactionId,
+            "itemId" to updatedTransaction.itemId,
+            "type" to updatedTransaction.type,
+            "quantity" to newQuantity,
+            "date" to newDate,
+            "locationId" to updatedTransaction.locationId,
+            "employeeId" to updatedTransaction.employeeId,
+            "totalCost" to updatedTransaction.totalCost
+        ).filterValues { it != null } as Map<String, Any>
+        scheduleSync("stock_transactions", transactionId.toString(), data)
+    }
+    
+    suspend fun deleteStockTransaction(transactionId: Int) {
+        val transaction = dao.getStockTransactionById(transactionId) ?: return
+        dao.deleteStockTransactionById(transactionId)
+        
+        // Recalculate item stock
+        recalculateItemStock(transaction.itemId)
+        
+        // Sync to Firestore
+        scheduleSync("stock_transactions", transactionId.toString(), emptyMap(), isDelete = true)
+    }
+    
+    private suspend fun recalculateItemStock(itemId: Int) {
+        // Get all transactions for this item
+        val transactions = dao.getStockTransactionsForItemList(itemId)
+        
+        // Calculate total IN and OUT
+        val totalIn = transactions.filter { it.type == "IN" }.sumOf { it.quantity }
+        val totalOut = transactions.filter { it.type == "OUT" }.sumOf { it.quantity }
+        val newQuantity = (totalIn - totalOut).coerceAtLeast(0.0)
+        
+        // Update item quantity
+        dao.updateInventoryQuantity(itemId, newQuantity)
+        
+        // Sync updated quantity to Firestore
+        val item = dao.getInventoryItemById(itemId)
+        item?.let {
+            val itemData: Map<String, Any> = mapOf(
+                "id" to itemId,
+                "name" to it.name,
+                "category" to it.category,
+                "unit" to it.unit,
+                "currentQuantity" to newQuantity,
+                "reorderLevel" to it.reorderLevel,
+                "dateAdded" to it.dateAdded
+            )
+            scheduleSync("inventory_items", itemId.toString(), itemData)
+        }
     }
     
     fun getStockTransactions(itemId: Int): Flow<List<StockTransactionEntity>> = 

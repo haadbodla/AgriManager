@@ -42,6 +42,15 @@ interface FarmDao {
 
     @Query("SELECT SUM(amount) FROM transactions WHERE employee_id = :employeeId AND type = 'DEBIT'")
     fun getTotalAdvances(employeeId: Int): Flow<Double?>
+    
+    @Query("SELECT * FROM transactions WHERE id = :transactionId")
+    suspend fun getTransactionById(transactionId: Int): TransactionEntity?
+    
+    @Update
+    suspend fun updateTransaction(transaction: TransactionEntity)
+    
+    @Query("DELETE FROM transactions WHERE id = :transactionId")
+    suspend fun deleteTransactionById(transactionId: Int)
 
     // --- Machines ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -206,6 +215,15 @@ interface FarmDao {
 
     @Query("DELETE FROM stock_transactions WHERE item_id = :itemId")
     suspend fun deleteStockTransactionsForItem(itemId: Int)
+    
+    @Query("SELECT * FROM stock_transactions WHERE transaction_id = :transactionId")
+    suspend fun getStockTransactionById(transactionId: Int): StockTransactionEntity?
+    
+    @Update
+    suspend fun updateStockTransaction(transaction: StockTransactionEntity)
+    
+    @Query("DELETE FROM stock_transactions WHERE transaction_id = :transactionId")
+    suspend fun deleteStockTransactionById(transactionId: Int)
 
     // --- Labor Logs ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)

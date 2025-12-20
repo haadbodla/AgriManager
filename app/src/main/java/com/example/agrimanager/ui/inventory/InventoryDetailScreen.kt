@@ -1,26 +1,27 @@
 package com.example.agrimanager.ui.inventory
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.example.agrimanager.utils.ShareHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,11 +29,15 @@ import java.util.*
 @Composable
 fun InventoryDetailScreen(
     itemId: Int,
-    onNavigateBack: () -> Unit,
+    navController: NavController,
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val item by viewModel.selectedItem.collectAsState()
-    val history by viewModel.selectedItemHistory.collectAsState()
+    val transactionsWithBalance by viewModel.transactionsWithBalance.collectAsState()
+    val totalStockIn by viewModel.totalStockIn.collectAsState()
+    val totalStockOut by viewModel.totalStockOut.collectAsState()
+    val totalPurchaseCost by viewModel.totalPurchaseCost.collectAsState()
 
     // Load data when screen opens
     LaunchedEffect(itemId) {
@@ -44,8 +49,25 @@ fun InventoryDetailScreen(
             TopAppBar(
                 title = { Text(item?.name ?: "Stock Ledger") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        item?.let { itm ->
+                            ShareHelper.shareStockReport(
+                                context = context,
+                                itemName = itm.name,
+                                currentStock = itm.currentQuantity,
+                                unit = itm.unit,
+                                totalIn = totalStockIn,
+                                totalOut = totalStockOut,
+                                transactionCount = transactionsWithBalance.size
+                            )
+                        }
+                    }) {
+                        Icon(Icons.Default.Share, "Share", tint = MaterialTheme.colorScheme.primary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -61,11 +83,12 @@ fun InventoryDetailScreen(
         } else {
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
-                // 1. Summary Card
+                // 1. Enhanced Summary Card
                 Surface(
                     modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shadowElevation = 4.dp
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
@@ -73,12 +96,26 @@ fun InventoryDetailScreen(
                     ) {
                         Text("Current Stock", style = MaterialTheme.typography.labelMedium)
                         Text(
-                            "${item!!.currentQuantity} ${item!!.unit}",
+                            "${item!!.currentQuantity.toInt()} ${item!!.unit}",
                             style = MaterialTheme.typography.displayMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                        
                         Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Mini Stats
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            MiniStatCard("Stock In", "${totalStockIn.toInt()} ${item!!.unit}", Color(0xFF2E7D32))
+                            MiniStatCard("Stock Out", "${totalStockOut.toInt()} ${item!!.unit}", Color(0xFFC62828))
+                            MiniStatCard("Total Cost", "Rs ${totalPurchaseCost.toInt()}", Color(0xFF1976D2))
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Button(
                                 onClick = { viewModel.openPurchaseDialog(isNew = false) },
@@ -107,15 +144,35 @@ fun InventoryDetailScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                // 2. History List
-                if (history.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("No history yet", color = Color.Gray)
+                // 2. Two-Column Transaction List
+                if (transactionsWithBalance.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Inventory,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.Gray.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("No transactions yet", color = Color.Gray)
+                        }
                     }
                 } else {
                     LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-                        items(history) { record ->
-                            HistoryItem(record, item!!.unit)
+                        items(transactionsWithBalance) { txWithBalance ->
+                            TwoColumnTransactionItem(
+                                txWithBalance = txWithBalance,
+                                unit = item!!.unit,
+                                onClick = {
+                                    navController.navigate(
+                                        "stock_transaction_detail/${txWithBalance.transaction.id}/${item!!.id}"
+                                    )
+                                }
+                            )
                         }
                     }
                 }
@@ -158,52 +215,161 @@ fun InventoryDetailScreen(
 }
 
 @Composable
-fun HistoryItem(model: StockHistoryUiModel, unit: String) {
-    val tx = model.transaction
-    val isIn = tx.type == "IN"
-    val date = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(tx.date))
-    val color = if (isIn) Color(0xFF2E7D32) else Color(0xFFC62828)
-
-    ListItem(
-        leadingContent = {
-            Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isIn) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                    contentDescription = null,
-                    tint = color
-                )
-            }
-        },
-        headlineContent = {
-            if (isIn) {
-                Text("Purchase", fontWeight = FontWeight.SemiBold)
-            } else {
-                // Here we show the resolved name!
-                Text("Used @ ${model.locationName ?: "Unknown Location"}", fontWeight = FontWeight.SemiBold)
-            }
-        },
-        supportingContent = {
-            Column {
-                Text(date, style = MaterialTheme.typography.bodySmall)
-                if (!isIn && model.employeeName != null) {
-                    Text("By: ${model.employeeName}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                }
-                if (isIn && tx.totalCost != null) {
-                    Text("Cost: Rs ${String.format("%.2f", tx.totalCost)}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                }
-            }
-        },
-        trailingContent = {
+private fun MiniStatCard(label: String, value: String, color: Color) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = color.copy(alpha = 0.1f),
+        modifier = Modifier.width(100.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                "${if (isIn) "+" else "-"}${tx.quantity.toInt()} $unit",
+                value,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = color,
-                style = MaterialTheme.typography.titleMedium
+                color = color
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.bodySmall,
+                color = color.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
             )
         }
-    )
-    Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    }
+}
+
+@Composable
+private fun TwoColumnTransactionItem(
+    txWithBalance: StockTransactionWithBalance,
+    unit: String,
+    onClick: () -> Unit
+) {
+    val tx = txWithBalance.transaction
+    val isIn = tx.type == "IN"
+    val date = SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(tx.date))
+    val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(tx.date))
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // Date header
+        Text(
+            date,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        // Two-column row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Stock OUT column (left)
+            if (!isIn) {
+                TransactionCard(
+                    quantity = tx.quantity,
+                    unit = unit,
+                    color = Color(0xFFC62828),
+                    label = txWithBalance.locationName ?: "Used",
+                    time = time,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+            
+            // Stock IN column (right)
+            if (isIn) {
+                TransactionCard(
+                    quantity = tx.quantity,
+                    unit = unit,
+                    color = Color(0xFF2E7D32),
+                    label = "Purchase",
+                    time = time,
+                    cost = tx.totalCost,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+        
+        // Running balance
+        Text(
+            "Balance: ${txWithBalance.runningStock.toInt()} $unit",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        
+        Divider(
+            modifier = Modifier.padding(top = 8.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+private fun TransactionCard(
+    quantity: Double,
+    unit: String,
+    color: Color,
+    label: String,
+    time: String,
+    cost: Double? = null,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = color.copy(alpha = 0.1f)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = if (color == Color(0xFF2E7D32)) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    "${if (color == Color(0xFF2E7D32)) "+" else "-"}${quantity.toInt()} $unit",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+            }
+            Text(
+                label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                time,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+            cost?.let {
+                Text(
+                    "Rs ${it.toInt()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
 }

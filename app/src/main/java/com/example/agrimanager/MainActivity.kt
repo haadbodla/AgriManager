@@ -3,6 +3,7 @@ package com.example.agrimanager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,6 +20,7 @@ import com.example.agrimanager.ui.location.LocationListScreen
 import com.example.agrimanager.ui.machine.MachineListScreen
 import com.example.agrimanager.ui.employee.EmployeeListScreen
 import com.example.agrimanager.ui.employee.SalaryScreen
+import com.example.agrimanager.ui.employee.TransactionDetailScreen
 import com.example.agrimanager.ui.inventory.InventoryListScreen
 import com.example.agrimanager.ui.labor.AddLaborLogScreen
 import com.example.agrimanager.ui.labor.LaborListScreen
@@ -40,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.fillMaxSize
 import com.example.agrimanager.data.local.DairyLogEntity
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
@@ -125,6 +128,33 @@ class MainActivity : ComponentActivity() {
                     val id = backStackEntry.arguments?.getInt("employeeId") ?: -1
                     SalaryScreen(employeeId = id, navController = navController)
                 }
+                
+                // Transaction Detail Screen
+                composable(
+                    "transaction_detail/{transactionId}/{employeeId}",
+                    arguments = listOf(
+                        navArgument("transactionId") { type = NavType.IntType },
+                        navArgument("employeeId") { type = NavType.IntType }
+                    )
+                ) { backStackEntry ->
+                    val txId = backStackEntry.arguments?.getInt("transactionId") ?: -1
+                    val empId = backStackEntry.arguments?.getInt("employeeId") ?: -1
+                    // We need to get the transaction and employee name
+                    // For now, pass placeholder - we'll improve this
+                    val viewModel: com.example.agrimanager.ui.employee.SalaryViewModel = hiltViewModel()
+                    viewModel.loadEmployee(empId)
+                    val employee by viewModel.employee.collectAsState()
+                    val transactions by viewModel.transactions.collectAsState()
+                    val transaction = transactions.find { it.id == txId }
+                    
+                    if (transaction != null && employee != null) {
+                        TransactionDetailScreen(
+                            transaction = transaction,
+                            employeeName = employee!!.name,
+                            navController = navController
+                        )
+                    }
+                }
 
                 // Existing routes
                 composable("machine_list") {
@@ -175,8 +205,45 @@ class MainActivity : ComponentActivity() {
                     val id = backStackEntry.arguments?.getInt("itemId") ?: -1
                     InventoryDetailScreen(
                         itemId = id,
-                        onNavigateBack = { navController.popBackStack() }
+                        navController = navController
                     )
+                }
+                
+                // Stock Transaction Detail Screen
+                composable(
+                    "stock_transaction_detail/{transactionId}/{itemId}",
+                    arguments = listOf(
+                        navArgument("transactionId") { type = NavType.IntType },
+                        navArgument("itemId") { type = NavType.IntType }
+                    )
+                ) { backStackEntry ->
+                    val txId = backStackEntry.arguments?.getInt("transactionId") ?: -1
+                    val itemId = backStackEntry.arguments?.getInt("itemId") ?: -1
+                    
+                    val viewModel: com.example.agrimanager.ui.inventory.InventoryViewModel = hiltViewModel()
+                    viewModel.selectItem(itemId)
+                    
+                    val item by viewModel.selectedItem.collectAsState()
+                    val transactionsWithBalance by viewModel.transactionsWithBalance.collectAsState()
+                    
+                    val txWithBalance = transactionsWithBalance.find { it.transaction.id == txId }
+                    
+                    if (txWithBalance != null && item != null) {
+                        com.example.agrimanager.ui.inventory.StockTransactionDetailScreen(
+                            transaction = txWithBalance.transaction,
+                            itemName = item!!.name,
+                            itemUnit = item!!.unit,
+                            navController = navController,
+                            viewModel = viewModel
+                        )
+                    } else {
+                        androidx.compose.foundation.layout.Box(
+                            modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+                            contentAlignment = androidx.compose.ui.Alignment.Center
+                        ) {
+                            androidx.compose.material3.CircularProgressIndicator()
+                        }
+                    }
                 }
 
                 composable("labor_list") {
