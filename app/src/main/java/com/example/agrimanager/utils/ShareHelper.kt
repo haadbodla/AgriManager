@@ -3,6 +3,7 @@ package com.example.agrimanager.utils
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileWriter
@@ -83,7 +84,95 @@ object ShareHelper {
     }
     
     /**
-     * Share stock transaction receipt
+     * Generate PDF for employee ledger with transaction history
+     */
+    fun generateEmployeeLedgerPDF(
+        context: Context,
+        employeeName: String,
+        baseSalary: Double,
+        totalSalary: Double,
+        totalAdvances: Double,
+        balance: Double,
+        transactions: List<com.example.agrimanager.ui.employee.TransactionWithBalance> = emptyList()
+    ) {
+        try {
+            // Convert TransactionWithBalance to TransactionWithEmployee
+            val transactionsWithEmployee = transactions.map { txWithBalance ->
+                val tx = txWithBalance.transaction
+                com.example.agrimanager.data.models.TransactionWithEmployee(
+                    id = tx.id,
+                    employeeId = tx.employeeId,
+                    employeeName = employeeName,
+                    amount = tx.amount,
+                    type = tx.type,
+                    timestamp = tx.timestamp
+                )
+            }
+            
+            // Create ExportData with employee and transactions
+            val exportData = com.example.agrimanager.data.models.ExportData(
+                farmName = "AgriManager",
+                exportDate = System.currentTimeMillis(),
+                generatedBy = employeeName,
+                userRole = "Employee Ledger",
+                dateRange = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date()),
+                machines = null,
+                fuelLogs = null,
+                employees = listOf(
+                    com.example.agrimanager.data.local.EmployeeEntity(
+                        id = 0,
+                        name = employeeName,
+                        baseSalary = baseSalary
+                    )
+                ),
+                transactions = transactionsWithEmployee,
+                locations = null,
+                bills = null,
+                inventoryItems = null,
+                stockTransactions = null,
+                laborLogs = null,
+                maintenanceLogs = null,
+                dairyLogs = null,
+                analytics = null
+            )
+            
+            // Use PdfExportManager to generate PDF
+            val pdfExportManager = com.example.agrimanager.utils.PdfExportManager(context)
+            val result = pdfExportManager.generatePdf(exportData)
+            
+            if (result.isSuccess) {
+                val file = result.getOrNull()!!
+                
+                // Share the generated PDF
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider",
+                    file
+                )
+                
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "Employee Ledger - $employeeName")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                
+                context.startActivity(Intent.createChooser(intent, "Share Employee Ledger PDF"))
+            } else {
+                // If PDF generation fails, fallback to text sharing
+                Toast.makeText(context, "PDF generation failed, sharing as text", Toast.LENGTH_SHORT).show()
+                shareEmployeeLedger(context, employeeName, totalSalary, totalAdvances, balance, transactions.size)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback to text sharing on error
+            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            shareEmployeeLedger(context, employeeName, totalSalary, totalAdvances, balance, transactions.size)
+        }
+    }
+    
+    /**
+     * Share stock transaction receipt with complete details
      */
     fun shareStockTransactionReceipt(
         context: Context,
@@ -92,7 +181,10 @@ object ShareHelper {
         quantity: Double,
         unit: String,
         date: Long,
-        currentStock: Double? = null
+        currentStock: Double? = null,
+        locationName: String? = null,
+        employeeName: String? = null,
+        totalCost: Double? = null
     ) {
         val dateFormat = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
         val formattedDate = dateFormat.format(Date(date))
@@ -106,6 +198,26 @@ object ShareHelper {
             appendLine("Type: $transactionType")
             appendLine("Quantity: ${quantity.toInt()} $unit")
             appendLine("Date: $formattedDate")
+            
+            // Add location if available (for stock OUT)
+            locationName?.let {
+                appendLine()
+                appendLine("Location: $it")
+            }
+            
+            // Add employee if available (for stock OUT)
+            employeeName?.let {
+                appendLine("Used By: $it")
+            }
+            
+            // Add cost if available (for stock IN)
+            totalCost?.let {
+                if (it > 0) {
+                    appendLine()
+                    appendLine("Total Cost: Rs ${it.toInt()}")
+                }
+            }
+            
             currentStock?.let {
                 appendLine()
                 appendLine("Current Stock: ${it.toInt()} $unit")
@@ -148,6 +260,100 @@ object ShareHelper {
         }
         
         shareText(context, reportText, "Stock Report")
+    }
+    
+    /**
+     * Generate PDF for stock report with transaction history
+     */
+    fun generateStockReportPDF(
+        context: Context,
+        itemName: String,
+        currentStock: Double,
+        unit: String,
+        totalIn: Double,
+        totalOut: Double,
+        totalCost: Double,
+        transactions: List<com.example.agrimanager.ui.inventory.StockTransactionWithBalance> = emptyList()
+    ) {
+        try {
+            // Convert StockTransactionWithBalance to StockTransactionWithItem
+            val stockTransactionsWithItem = transactions.map { txWithBalance ->
+                val tx = txWithBalance.transaction
+                com.example.agrimanager.data.models.StockTransactionWithItem(
+                    id = tx.id,
+                    itemId = tx.itemId,
+                    itemName = itemName,
+                    type = tx.type,
+                    quantity = tx.quantity,
+                    totalCost = tx.totalCost,
+                    date = tx.date,
+                    locationName = txWithBalance.locationName,
+                    employeeName = txWithBalance.employeeName
+                )
+            }
+            
+            // Create ExportData with inventory item and transactions
+            val exportData = com.example.agrimanager.data.models.ExportData(
+                farmName = "AgriManager",
+                exportDate = System.currentTimeMillis(),
+                generatedBy = itemName,
+                userRole = "Stock Report",
+                dateRange = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date()),
+                machines = null,
+                fuelLogs = null,
+                employees = null,
+                transactions = null,
+                locations = null,
+                bills = null,
+                inventoryItems = listOf(
+                    com.example.agrimanager.data.local.InventoryItemEntity(
+                        id = 0,
+                        name = itemName,
+                        category = "Stock",
+                        currentQuantity = currentStock,
+                        unit = unit
+                    )
+                ),
+                stockTransactions = stockTransactionsWithItem,
+                laborLogs = null,
+                maintenanceLogs = null,
+                dairyLogs = null,
+                analytics = null
+            )
+            
+            // Use PdfExportManager to generate PDF
+            val pdfExportManager = com.example.agrimanager.utils.PdfExportManager(context)
+            val result = pdfExportManager.generatePdf(exportData)
+            
+            if (result.isSuccess) {
+                val file = result.getOrNull()!!
+                
+                // Share the generated PDF
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider",
+                    file
+                )
+                
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "Stock Report - $itemName")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                
+                context.startActivity(Intent.createChooser(intent, "Share Stock Report PDF"))
+            } else {
+                // If PDF generation fails, fallback to text sharing
+                Toast.makeText(context, "PDF generation failed, sharing as text", Toast.LENGTH_SHORT).show()
+                shareStockReport(context, itemName, currentStock, unit, totalIn, totalOut, transactions.size)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback to text sharing on error
+            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            shareStockReport(context, itemName, currentStock, unit, totalIn, totalOut, transactions.size)
+        }
     }
     
     /**
@@ -268,7 +474,7 @@ object ShareHelper {
     }
     
     /**
-     * Generate PDF receipt (placeholder - requires PDF library)
+     * Generate PDF receipt for salary transactions using PdfExportManager
      */
     fun generatePDFReceipt(
         context: Context,
@@ -277,8 +483,71 @@ object ShareHelper {
         amount: Double,
         date: Long
     ) {
-        // TODO: Implement PDF generation using a library like iText or PDFBox
-        // For now, share as text
-        shareTransactionReceipt(context, employeeName, transactionType, amount, date)
+        try {
+            // Determine transaction type
+            val isCredit = transactionType.contains("Salary", ignoreCase = true) || 
+                          transactionType.contains("Payment", ignoreCase = true)
+            
+            // Create a minimal ExportData with just this transaction
+            val exportData = com.example.agrimanager.data.models.ExportData(
+                farmName = "AgriManager",
+                exportDate = System.currentTimeMillis(),
+                generatedBy = employeeName,
+                userRole = "Receipt",
+                dateRange = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(date)),
+                machines = null,
+                fuelLogs = null,
+                employees = null,
+                transactions = listOf(
+                    com.example.agrimanager.data.models.TransactionWithEmployee(
+                        id = 0,
+                        employeeId = 0,
+                        employeeName = employeeName,
+                        amount = amount,
+                        type = if (isCredit) "CREDIT" else "DEBIT",
+                        timestamp = date
+                    )
+                ),
+                locations = null,
+                bills = null,
+                inventoryItems = null,
+                stockTransactions = null,
+                laborLogs = null,
+                maintenanceLogs = null,
+                dairyLogs = null,
+                analytics = null
+            )
+            
+            // Use PdfExportManager to generate PDF
+            val pdfExportManager = com.example.agrimanager.utils.PdfExportManager(context)
+            val result = pdfExportManager.generatePdf(exportData)
+            
+            if (result.isSuccess) {
+                val file = result.getOrNull()!!
+                
+                // Share the generated PDF
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider",
+                    file
+                )
+                
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "$transactionType - $employeeName")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                
+                context.startActivity(Intent.createChooser(intent, "Share Receipt PDF"))
+            } else {
+                // If PDF generation fails, fallback to text sharing
+                shareTransactionReceipt(context, employeeName, transactionType, amount, date)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback to text sharing on error
+            shareTransactionReceipt(context, employeeName, transactionType, amount, date)
+        }
     }
 }

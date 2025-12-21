@@ -70,6 +70,29 @@ fun TransactionDetailScreen(
                     }
                 },
                 actions = {
+                    // Quick action buttons (matching SalaryScreen)
+                    IconButton(onClick = {
+                        ShareHelper.shareTransactionReceipt(
+                            context = context,
+                            employeeName = employeeName,
+                            transactionType = if (isCredit) "Salary Payment" else "Advance Given",
+                            amount = transaction.amount,
+                            date = transaction.timestamp
+                        )
+                    }) {
+                        Icon(Icons.Default.Share, "Share", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = {
+                        ShareHelper.generatePDFReceipt(
+                            context = context,
+                            employeeName = employeeName,
+                            transactionType = if (isCredit) "Salary Payment" else "Advance Given",
+                            amount = transaction.amount,
+                            date = transaction.timestamp
+                        )
+                    }) {
+                        Icon(Icons.Default.PictureAsPdf, "PDF", tint = MaterialTheme.colorScheme.primary)
+                    }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Default.Delete, "Delete", tint = Color(0xFFC62828))
                     }
@@ -230,42 +253,18 @@ fun TransactionDetailScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 4. Action Buttons
-            Row(
+
+            // 4. Action Button
+            OutlinedButton(
+                onClick = { showEditDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
             ) {
-                OutlinedButton(
-                    onClick = { showEditDialog = true },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Edit")
-                }
-                
-                Button(
-                    onClick = {
-                        ShareHelper.shareTransactionReceipt(
-                            context = context,
-                            employeeName = employeeName,
-                            transactionType = if (isCredit) "Salary Payment" else "Advance Given",
-                            amount = transaction.amount,
-                            date = transaction.timestamp
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF00897B)
-                    )
-                ) {
-                    Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Share")
-                }
+                Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Edit")
             }
         }
         

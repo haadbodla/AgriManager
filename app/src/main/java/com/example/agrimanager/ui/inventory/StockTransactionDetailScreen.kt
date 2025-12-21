@@ -26,6 +26,8 @@ fun StockTransactionDetailScreen(
     transaction: StockTransactionEntity,
     itemName: String,
     itemUnit: String,
+    locationName: String? = null,
+    employeeName: String? = null,
     navController: NavController,
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
@@ -88,64 +90,86 @@ fun StockTransactionDetailScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Large Quantity Display
+            // 1. Modern Quantity Display Card with Gradient
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = if (isIn) Color(0xFF2E7D32) else Color(0xFFC62828)
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Quantity",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "${if (isIn) "+" else "-"}${transaction.quantity.toInt()} $itemUnit",
-                        style = MaterialTheme.typography.displayLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isIn) Color(0xFF2E7D32) else Color(0xFFC62828)
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isIn) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.size(40.dp)
+                        )
+                        
+                        Text(
+                            text = if (isIn) "Stock Purchase" else "Stock Usage",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontWeight = FontWeight.Medium
+                        )
+                        
+                        Text(
+                            text = "${if (isIn) "+" else "-"}${transaction.quantity.toInt()} $itemUnit",
+                            style = MaterialTheme.typography.displayLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = itemName,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
             }
 
-            // 2. Transaction Details
+            // 2. Glassmorphism Details Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                )
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    DetailRow(
-                        label = "Item",
-                        value = itemName,
-                        icon = Icons.Default.Inventory
+                    Text(
+                        text = "Transaction Details",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     
-                    Divider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    
-                    DetailRow(
-                        label = "Type",
-                        value = if (isIn) "Stock Purchase" else "Stock Usage",
-                        icon = if (isIn) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                        valueColor = if (isIn) Color(0xFF2E7D32) else Color(0xFFC62828)
+                    Divider(
+                        thickness = 2.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                     )
-                    
-                    Divider(color = MaterialTheme.colorScheme.surfaceVariant)
                     
                     DetailRow(
                         label = "Date & Time",
@@ -153,87 +177,113 @@ fun StockTransactionDetailScreen(
                         icon = Icons.Default.CalendarToday
                     )
                     
-                    if (transaction.totalCost != null) {
+                    // Show location for stock OUT transactions
+                    if (!isIn && locationName != null) {
                         Divider(color = MaterialTheme.colorScheme.surfaceVariant)
                         DetailRow(
-                            label = "Total Cost",
-                            value = "Rs ${transaction.totalCost.toInt()}",
-                            icon = Icons.Default.AttachMoney
+                            label = "Location",
+                            value = locationName,
+                            icon = Icons.Default.LocationOn
                         )
+                    }
+                    
+                    // Show employee for stock OUT transactions
+                    if (!isIn && employeeName != null) {
+                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                        DetailRow(
+                            label = "Used By",
+                            value = employeeName,
+                            icon = Icons.Default.Person
+                        )
+                    }
+                    
+                    if (transaction.totalCost != null && transaction.totalCost > 0) {
+                        Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFF4CAF50).copy(alpha = 0.1f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AttachMoney,
+                                        contentDescription = null,
+                                        tint = Color(0xFF4CAF50),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Text(
+                                        text = "Total Cost",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF4CAF50)
+                                    )
+                                }
+                                
+                                Text(
+                                    text = "Rs ${transaction.totalCost.toInt()}",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF4CAF50)
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // 3. Visual Receipt Card
-            Card(
+            // 3. Compact Summary Badge
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isIn) Color(0xFF2E7D32) else Color(0xFFC62828)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                shadowElevation = 2.dp
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Receipt,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(48.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = if (isIn) "Purchase Receipt" else "Usage Receipt",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "${transaction.quantity.toInt()} $itemUnit",
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Surface(
-                        color = Color.White.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(8.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        Icon(
+                            imageVector = Icons.Default.Receipt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Column {
                             Text(
-                                text = itemName,
+                                text = "AgriManager",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = formattedDate,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.9f)
+                                text = "Stock Management",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                             )
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = "AgriManager",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
+                    Icon(
+                        imageVector = if (isIn) Icons.Default.CheckCircle else Icons.Default.Info,
+                        contentDescription = null,
+                        tint = if (isIn) Color(0xFF4CAF50) else Color(0xFFFF9800),
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
@@ -265,7 +315,10 @@ fun StockTransactionDetailScreen(
                             transactionType = if (isIn) "Stock Purchase" else "Stock Usage",
                             quantity = transaction.quantity,
                             unit = itemUnit,
-                            date = transaction.date
+                            date = transaction.date,
+                            locationName = locationName,
+                            employeeName = employeeName,
+                            totalCost = transaction.totalCost
                         )
                     },
                     modifier = Modifier.weight(1f),

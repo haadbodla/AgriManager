@@ -554,15 +554,32 @@ fun StockOutDialog(
                     label = { Text("Quantity (${item.unit})") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    isError = quantity.isNotEmpty() && (quantity.toDoubleOrNull() == null || (quantity.toDoubleOrNull() ?: 0.0) <= 0),
+                    isError = quantity.isNotEmpty() && (quantity.toDoubleOrNull() == null || 
+                             (quantity.toDoubleOrNull() ?: 0.0) <= 0 ||
+                             (quantity.toDoubleOrNull() ?: 0.0) > item.currentQuantity),
                     supportingText = {
                         if (quantity.isNotEmpty()) {
                              val qty = quantity.toDoubleOrNull()
                              if (qty == null) {
-                                 Text("Please enter a valid number")
+                                 Text("Please enter a valid number", color = MaterialTheme.colorScheme.error)
                              } else if (qty <= 0) {
-                                 Text("Quantity must be greater than 0")
+                                 Text("Quantity must be greater than 0", color = MaterialTheme.colorScheme.error)
+                             } else if (qty > item.currentQuantity) {
+                                 Text(
+                                     "Cannot use more than available stock (${item.currentQuantity.toInt()} ${item.unit})",
+                                     color = MaterialTheme.colorScheme.error
+                                 )
+                             } else {
+                                 Text(
+                                     "Available: ${item.currentQuantity.toInt()} ${item.unit}",
+                                     color = MaterialTheme.colorScheme.primary
+                                 )
                              }
+                        } else {
+                            Text(
+                                "Available: ${item.currentQuantity.toInt()} ${item.unit}",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 )
@@ -636,11 +653,12 @@ fun StockOutDialog(
             TextButton(
                 onClick = {
                     val qty = quantity.toDoubleOrNull() ?: 0.0
-                    if (qty > 0 && selectedLocationId != null && selectedEmployeeId != null) {
+                    if (qty > 0 && qty <= item.currentQuantity && selectedLocationId != null && selectedEmployeeId != null) {
                         onConfirm(qty, selectedLocationId!!, selectedEmployeeId!!)
                     }
                 },
                 enabled = (quantity.toDoubleOrNull() ?: 0.0) > 0 && 
+                         (quantity.toDoubleOrNull() ?: 0.0) <= item.currentQuantity &&
                          selectedLocationId != null && 
                          selectedEmployeeId != null
             ) {

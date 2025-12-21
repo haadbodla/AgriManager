@@ -57,9 +57,6 @@ fun SalaryScreen(
                 },
                 actions = {
                     // Quick action buttons
-                    IconButton(onClick = { /* TODO: SMS */ }) {
-                        Icon(Icons.Default.Message, "SMS", tint = MaterialTheme.colorScheme.primary)
-                    }
                     IconButton(onClick = {
                         employee?.let { emp ->
                             ShareHelper.shareEmployeeLedger(
@@ -76,12 +73,14 @@ fun SalaryScreen(
                     }
                     IconButton(onClick = {
                         employee?.let { emp ->
-                            ShareHelper.generatePDFReceipt(
+                            ShareHelper.generateEmployeeLedgerPDF(
                                 context = context,
                                 employeeName = emp.name,
-                                transactionType = "Ledger Summary",
-                                amount = balance,
-                                date = System.currentTimeMillis()
+                                baseSalary = emp.baseSalary,
+                                totalSalary = totalCredits,
+                                totalAdvances = totalAdvances,
+                                balance = balance,
+                                transactions = transactionsWithBalance
                             )
                         }
                     }) {

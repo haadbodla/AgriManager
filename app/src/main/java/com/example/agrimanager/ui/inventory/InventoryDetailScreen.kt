@@ -69,6 +69,22 @@ fun InventoryDetailScreen(
                     }) {
                         Icon(Icons.Default.Share, "Share", tint = MaterialTheme.colorScheme.primary)
                     }
+                    IconButton(onClick = {
+                        item?.let { itm ->
+                            ShareHelper.generateStockReportPDF(
+                                context = context,
+                                itemName = itm.name,
+                                currentStock = itm.currentQuantity,
+                                unit = itm.unit,
+                                totalIn = totalStockIn,
+                                totalOut = totalStockOut,
+                                totalCost = totalPurchaseCost,
+                                transactions = transactionsWithBalance
+                            )
+                        }
+                    }) {
+                        Icon(Icons.Default.PictureAsPdf, "PDF", tint = MaterialTheme.colorScheme.primary)
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer

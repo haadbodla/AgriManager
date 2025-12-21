@@ -233,6 +233,8 @@ class MainActivity : ComponentActivity() {
                             transaction = txWithBalance.transaction,
                             itemName = item!!.name,
                             itemUnit = item!!.unit,
+                            locationName = txWithBalance.locationName,
+                            employeeName = txWithBalance.employeeName,
                             navController = navController,
                             viewModel = viewModel
                         )

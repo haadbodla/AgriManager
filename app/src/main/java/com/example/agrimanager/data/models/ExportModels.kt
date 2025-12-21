@@ -66,5 +66,7 @@ data class StockTransactionWithItem(
     val type: String,  // "IN" or "OUT"
     val quantity: Double,
     val totalCost: Double?,
-    val date: Long
+    val date: Long,
+    val locationName: String? = null,  // For OUT transactions
+    val employeeName: String? = null   // For OUT transactions
 )

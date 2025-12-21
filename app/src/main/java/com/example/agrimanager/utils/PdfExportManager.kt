@@ -268,7 +268,7 @@ class PdfExportManager @Inject constructor(
     private fun addStockTransactionsSection(document: Document, transactions: List<com.example.agrimanager.data.models.StockTransactionWithItem>) {
         addSectionTitle(document, "STOCK TRANSACTIONS")
         
-        val table = Table(floatArrayOf(1f, 2f, 2f, 1.5f, 1.5f, 1.5f))
+        val table = Table(floatArrayOf(0.5f, 1.5f, 1.5f, 1f, 1f, 1f, 1.5f, 1.5f))
             .setWidth(UnitValue.createPercentValue(100f))
         
         table.addHeaderCell(createHeaderCell("#"))
@@ -277,6 +277,8 @@ class PdfExportManager @Inject constructor(
         table.addHeaderCell(createHeaderCell("Type"))
         table.addHeaderCell(createHeaderCell("Quantity"))
         table.addHeaderCell(createHeaderCell("Cost"))
+        table.addHeaderCell(createHeaderCell("Location"))
+        table.addHeaderCell(createHeaderCell("Employee"))
         
         var totalCost = 0.0
         transactions.forEachIndexed { index, trans ->
@@ -286,12 +288,14 @@ class PdfExportManager @Inject constructor(
             table.addCell(createDataCell(if (trans.type == "IN") "Restock" else "Stock-Out"))
             table.addCell(createDataCell("${trans.quantity}"))
             table.addCell(createDataCell(trans.totalCost?.let { "Rs. $it" } ?: "-"))
+            table.addCell(createDataCell(trans.locationName ?: "-"))
+            table.addCell(createDataCell(trans.employeeName ?: "-"))
             if (trans.totalCost != null) {
                 totalCost += trans.totalCost
             }
         }
         
-        table.addCell(createTotalCell("TOTAL COST", 5))
+        table.addCell(createTotalCell("TOTAL COST", 7))
         table.addCell(createTotalCell("Rs. $totalCost", 1))
         
         document.add(table)

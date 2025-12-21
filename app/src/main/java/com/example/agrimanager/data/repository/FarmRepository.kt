@@ -409,7 +409,7 @@ class FarmRepository @Inject constructor(
         val item = dao.getInventoryItemById(itemId) ?: return
         
         // Update quantity
-        val newQuantity = (item.currentQuantity - quantity).coerceAtLeast(0.0)
+        val newQuantity = item.currentQuantity - quantity
         dao.updateInventoryQuantity(itemId, newQuantity)
         
         // Sync updated quantity to Firestore
@@ -487,7 +487,7 @@ class FarmRepository @Inject constructor(
         // Calculate total IN and OUT
         val totalIn = transactions.filter { it.type == "IN" }.sumOf { it.quantity }
         val totalOut = transactions.filter { it.type == "OUT" }.sumOf { it.quantity }
-        val newQuantity = (totalIn - totalOut).coerceAtLeast(0.0)
+        val newQuantity = totalIn - totalOut
         
         // Update item quantity
         dao.updateInventoryQuantity(itemId, newQuantity)
