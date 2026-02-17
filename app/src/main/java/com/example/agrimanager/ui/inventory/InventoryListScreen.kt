@@ -24,7 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.InventoryItemEntity
 import com.example.agrimanager.data.local.LocationEntity
 import com.example.agrimanager.data.local.EmployeeEntity
-import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.ui.dashboard.NewDataTrackerEntryPoint
 import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint

@@ -20,7 +20,7 @@ import com.example.agrimanager.data.local.DairyCompanyEntity
 import com.example.agrimanager.utils.PermissionHelper
 import com.example.agrimanager.utils.NewDataTracker
 import dagger.hilt.android.EntryPointAccessors
-import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.ui.dashboard.NewDataTrackerEntryPoint
 import java.text.SimpleDateFormat
 import java.util.*
 

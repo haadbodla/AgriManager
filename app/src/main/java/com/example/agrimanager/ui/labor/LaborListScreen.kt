@@ -20,7 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.agrimanager.data.local.LaborLogWithEmployee
 import com.example.agrimanager.ui.components.NewBadge
 import com.example.agrimanager.ui.components.newCardColor
-import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.ui.dashboard.NewDataTrackerEntryPoint
 import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import dagger.hilt.android.EntryPointAccessors

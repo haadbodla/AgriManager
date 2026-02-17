@@ -37,7 +37,7 @@ class NewDataTracker @Inject constructor(
      * Returns 0 if never viewed (all data will be "new" initially, then marked seen).
      */
     fun getLastSeenTimestamp(module: String): Long {
-        return prefs.getLong("last_seen_$module", System.currentTimeMillis())
+        return prefs.getLong("last_seen_$module", 0L)
     }
     
     /**

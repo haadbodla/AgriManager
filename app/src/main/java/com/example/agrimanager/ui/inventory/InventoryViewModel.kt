@@ -193,7 +193,7 @@ class InventoryViewModel @Inject constructor(
                 category = category,
                 unit = unit,
                 reorderLevel = reorderLevel,
-                currentQuantity = quantity
+                currentQuantity = 0.0 // Start at 0; recordPurchase() will add the correct quantity
             )
             repository.addInventoryItem(item)
 

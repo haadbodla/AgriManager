@@ -25,7 +25,7 @@ import com.example.agrimanager.data.local.BillWithLocation
 import com.example.agrimanager.data.local.LocationEntity
 import com.example.agrimanager.ui.components.NewBadge
 import com.example.agrimanager.ui.components.newCardColor
-import com.example.agrimanager.ui.fuel.NewDataTrackerEntryPoint
+import com.example.agrimanager.ui.dashboard.NewDataTrackerEntryPoint
 import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint

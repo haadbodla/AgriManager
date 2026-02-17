@@ -24,6 +24,7 @@ import com.example.agrimanager.ui.components.newCardColor
 import com.example.agrimanager.utils.NewDataTracker
 import com.example.agrimanager.utils.PermissionHelper
 import com.example.agrimanager.ui.dashboard.PermissionHelperEntryPoint
+import com.example.agrimanager.ui.dashboard.NewDataTrackerEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import java.text.SimpleDateFormat
 import java.util.Date

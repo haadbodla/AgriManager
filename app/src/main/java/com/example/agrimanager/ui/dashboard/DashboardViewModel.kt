@@ -14,6 +14,20 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+
+/**
+ * Hilt EntryPoint for accessing NewDataTracker in Composable functions.
+ * Used by screens that need to check if data is new without injecting via ViewModel.
+ */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface NewDataTrackerEntryPoint {
+    fun newDataTracker(): NewDataTracker
+}
+
 
 /**
  * Data class holding new data counts for each module.
